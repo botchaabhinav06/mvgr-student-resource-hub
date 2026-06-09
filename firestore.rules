@@ -1,0 +1,117 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global helper primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation helper to protect profile schema and prevent self-promotion / shadow updates
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'email', 'role', 'status', 'department'])
+        && data.name is string && data.name.size() <= 120
+        && data.email is string && data.email.size() <= 120
+        && data.role is string && (data.role == 'student' || data.role == 'faculty')
+        && data.status is string && data.status == 'active'
+        && data.department is string && data.department.size() <= 50;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if isSignedIn() && isFaculty();
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) 
+        && isValidUser(incoming())
+        && incoming().role == existing().role
+        && incoming().status == existing().status;
+      allow delete: if false;
+    }
+
+    // Role-based lookup helpers using get document reads
+    function isFaculty() {
+      return isSignedIn() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'faculty';
+    }
+
+    // Strict schema blueprint validator for Materials
+    function isValidMaterial(data) {
+      return data.keys().hasAll(['id', 'title', 'category', 'department', 'year', 'semester', 'uploadedBy', 'uploadedByName', 'uploadedById', 'uploadDate', 'downloadsCount', 'fileName', 'previewUrl', 'status', 'createdAt', 'updatedAt'])
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 200
+        && data.category is string && data.category.size() <= 100
+        && data.department is string && data.department.size() <= 120
+        && data.year is string && data.year.size() <= 10
+        && data.semester is string && data.semester.size() <= 10
+        && data.uploadedBy is string && data.uploadedBy.size() <= 100
+        && data.uploadedByName is string && data.uploadedByName.size() <= 120
+        && data.uploadedById is string && data.uploadedById.size() <= 128
+        && data.uploadDate is string && data.uploadDate.size() <= 50
+        && data.fileName is string && data.fileName.size() <= 200
+        && data.previewUrl is string && data.previewUrl.size() <= 1000
+        && data.status is string && (data.status == 'active' || data.status == 'inactive')
+        && data.createdAt is string && data.createdAt.size() <= 50
+        && data.updatedAt is string && data.updatedAt.size() <= 50
+        && data.downloadsCount is int;
+    }
+
+    match /materials/{materialId} {
+      allow read: if isSignedIn() && (isFaculty() || resource.data.status == 'active');
+      allow create: if isSignedIn() && isFaculty() && isValidMaterial(incoming());
+      allow update: if isSignedIn() && isValidMaterial(incoming()) && (
+        isFaculty() || (
+          // Student download count increment action: can ONLY modify downloadsCount and updatedAt
+          incoming().diff(existing()).affectedKeys().hasOnly(['downloadsCount', 'updatedAt'])
+        )
+      );
+      allow delete: if isSignedIn() && isFaculty();
+    }
+
+    // Strict schema blueprint validator for Reports
+    function isValidReport(data) {
+      return data.keys().hasAll(['id', 'materialId', 'materialTitle', 'studentName', 'studentRoll', 'issueType', 'description', 'status', 'reportDate'])
+        && data.id is string && data.id.size() <= 128
+        && data.materialId is string && data.materialId.size() <= 128
+        && data.materialTitle is string && data.materialTitle.size() <= 200
+        && data.studentName is string && data.studentName.size() <= 120
+        && data.studentRoll is string && data.studentRoll.size() <= 30
+        && data.issueType is string && data.issueType.size() <= 100
+        && data.description is string && data.description.size() <= 1000
+        && data.status is string && (data.status == 'pending' || data.status == 'resolved' || data.status == 'dismissed')
+        && data.reportDate is string && data.reportDate.size() <= 50;
+    }
+
+    match /reports/{reportId} {
+      allow read: if isSignedIn() && (
+        isFaculty() || resource.data.studentRoll == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.registerNumber
+      );
+      allow create: if isSignedIn() && isValidReport(incoming()) && (
+        isFaculty() || incoming().studentRoll == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.registerNumber
+      );
+      allow update: if isSignedIn() && isFaculty() && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+      );
+      allow delete: if isSignedIn() && isFaculty();
+    }
+  }
+}

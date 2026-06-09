@@ -1,0 +1,6 @@
+{
+  "name": "MVGR Student Resource Hub",
+  "description": "A centralized digital academic platform for MVGR College focusing on secure access, upload, and reporting of study materials.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,150 @@
+{
+  "entities": {
+    "studentProfile": {
+      "title": "StudentProfile",
+      "description": "Student user profile information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fullName": { "type": "string" },
+        "registerNumber": { "type": "string" },
+        "email": { "type": "string" },
+        "department": { "type": "string" },
+        "currentYear": { "type": "number" },
+        "currentSemester": { "type": "number" },
+        "role": { "type": "string" },
+        "accountStatus": { "type": "string" }
+      },
+      "required": [
+        "id",
+        "fullName",
+        "registerNumber",
+        "email",
+        "department",
+        "currentYear",
+        "currentSemester",
+        "role",
+        "accountStatus"
+      ]
+    },
+    "facultyProfile": {
+      "title": "FacultyProfile",
+      "description": "Faculty user profile information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "facultyName": { "type": "string" },
+        "facultyId": { "type": "string" },
+        "email": { "type": "string" },
+        "department": { "type": "string" },
+        "designation": { "type": "string" },
+        "role": { "type": "string" },
+        "accountStatus": { "type": "string" }
+      },
+      "required": [
+        "id",
+        "facultyName",
+        "facultyId",
+        "email",
+        "department",
+        "designation",
+        "role",
+        "accountStatus"
+      ]
+    },
+    "material": {
+      "title": "Material",
+      "description": "Metadata for textbook, syllabus, and lecture resource materials",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "department": { "type": "string" },
+        "year": { "type": "string" },
+        "semester": { "type": "string" },
+        "uploadedBy": { "type": "string" },
+        "uploadedByName": { "type": "string" },
+        "uploadedById": { "type": "string" },
+        "uploadDate": { "type": "string" },
+        "downloadsCount": { "type": "number" },
+        "fileName": { "type": "string" },
+        "previewUrl": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": [
+        "id",
+        "title",
+        "category",
+        "department",
+        "year",
+        "semester",
+        "uploadedBy",
+        "uploadedByName",
+        "uploadedById",
+        "uploadDate",
+        "downloadsCount",
+        "fileName",
+        "previewUrl",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "issueReport": {
+      "title": "IssueReport",
+      "description": "Student reported issue ticket regarding study materials",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "reportId": { "type": "string" },
+        "materialId": { "type": "string" },
+        "materialTitle": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "studentRoll": { "type": "string" },
+        "registerNumber": { "type": "string" },
+        "department": { "type": "string" },
+        "year": { "type": "string" },
+        "semester": { "type": "string" },
+        "issueType": { "type": "string" },
+        "reportReason": { "type": "string" },
+        "description": { "type": "string" },
+        "note": { "type": "string" },
+        "status": { "type": "string" },
+        "reportDate": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "facultyName": { "type": "string" }
+      },
+      "required": [
+        "id",
+        "materialId",
+        "materialTitle",
+        "studentName",
+        "studentRoll",
+        "issueType",
+        "description",
+        "status",
+        "reportDate"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "studentProfile",
+      "description": "User profiles for both students and faculty"
+    },
+    "/materials/{materialId}": {
+      "schema": "material",
+      "description": "Curated educational documents and syllabus collections"
+    },
+    "/reports/{reportId}": {
+      "schema": "issueReport",
+      "description": "Student submitted discrepancy records and issues"
+    }
+  }
+}
