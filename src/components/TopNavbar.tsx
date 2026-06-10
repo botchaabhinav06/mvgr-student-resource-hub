@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Menu, Bell, Shield, Check, Sparkles, X, User, LogOut, ChevronDown } from "lucide-react";
+import { Menu, Bell, Shield, Check, Sparkles, X, User, LogOut, ChevronDown, Sun, Moon } from "lucide-react";
 import { StudentProfile, FacultyProfile, ActiveScreen, IssueReport } from "../types";
 
 interface TopNavbarProps {
@@ -11,6 +11,8 @@ interface TopNavbarProps {
   onDismissReport?: (id: string) => void;
   setScreen?: (screen: ActiveScreen) => void;
   onLogoutClick?: () => void;
+  theme?: "dark" | "light";
+  onToggleTheme?: () => void;
 }
 
 export const TopNavbar: React.FC<TopNavbarProps> = ({
@@ -22,6 +24,8 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
   onDismissReport,
   setScreen,
   onLogoutClick,
+  theme = "dark",
+  onToggleTheme,
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
@@ -96,6 +100,23 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
       </div>
 
       <div className="flex items-center gap-3 relative">
+        {/* Toggle Theme Button */}
+        {onToggleTheme && (
+          <button
+            onClick={onToggleTheme}
+            id="nav-theme-toggle"
+            className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-850 transition-colors cursor-pointer flex items-center justify-center shadow-md animate-in fade-in"
+            title={theme === "dark" ? "Switch to Academic Ivory" : "Switch to Cyber Dark"}
+            aria-label="Toggle Theme Mode"
+          >
+            {theme === "dark" ? (
+              <Sun className="w-4 h-4 text-amber-400" />
+            ) : (
+              <Moon className="w-4 h-4 text-emerald-600" />
+            )}
+          </button>
+        )}
+
         {/* Notifications Dispatcher Toggle */}
         <div className="relative">
           <button

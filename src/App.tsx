@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Sparkles, Terminal, Box, Shield, ArrowRight, CornerDownRight, LogOut, CheckCircle, Flame, Building, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { Sparkles, Terminal, Box, Shield, ArrowRight, CornerDownRight, LogOut, CheckCircle, Flame, Building, Loader2, AlertCircle, Eye, EyeOff, Sun, Moon } from "lucide-react";
 
 // Types
 import { ActiveScreen, StudentProfile, FacultyProfile, Material, IssueReport } from "./types";
@@ -67,6 +67,27 @@ const mapFirestoreUser = (uid: string, data: any): StudentProfile | FacultyProfi
 };
 
 export default function App() {
+  // Theme State Setup
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    return (localStorage.getItem("mvgr-theme") as "dark" | "light") || "dark";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("mvgr-theme", theme);
+    document.documentElement.setAttribute("data-theme", theme);
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+      document.documentElement.classList.remove("light");
+    } else {
+      document.documentElement.classList.add("light");
+      document.documentElement.classList.remove("dark");
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  };
+
   // Session Access state
   const [currentUser, setCurrentUser] = useState<StudentProfile | FacultyProfile | null>(null);
   const [loginRole, setLoginRole] = useState<"student" | "faculty">("student");
@@ -775,7 +796,7 @@ export default function App() {
   if (authInitializing) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center font-sans relative">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(0,229,255,0.03),transparent_40%)]" />
+        <div className="academic-bg-glow absolute inset-0 pointer-events-none" />
         <div className="text-center space-y-4 animate-pulse relative z-10">
           <div className="p-4 bg-cyan-500/10 rounded-2xl border border-cyan-500/20 text-cyber-cyan inline-flex items-center justify-center">
             <Box className="w-8 h-8 animate-spin text-cyber-cyan" />
@@ -793,12 +814,28 @@ export default function App() {
       {!currentUser ? (
         /* Cyber Neon Secure Login Page Screen with Premium Hero Section */
         <div className="flex-1 flex flex-col lg:flex-row items-center justify-center p-6 md:p-12 relative min-h-screen gap-12 lg:gap-16 max-w-7xl mx-auto w-full">
+          {/* Floating Theme Toggle Switch for Login Screen (Icon-only) */}
+          <div className="absolute top-6 right-6 z-50">
+            <button
+              onClick={toggleTheme}
+              id="auth-theme-toggle"
+              className="p-3 cyber-glass text-slate-400 hover:text-slate-850 dark:hover:text-white rounded-full flex items-center justify-center cursor-pointer shadow-xl transition-colors"
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark" ? (
+                <Sun className="w-5 h-5 text-amber-400 animate-pulse" />
+              ) : (
+                <Moon className="w-5 h-5 text-emerald-600 animate-pulse" />
+              )}
+            </button>
+          </div>
           
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(0,229,255,0.04),transparent_40%),radial-gradient(circle_at_70%_70%,rgba(139,92,246,0.04),transparent_40%)] pointer-events-none" />
+          <div className="academic-bg-glow absolute inset-0 pointer-events-none" />
 
           {/* PREMIUM HERO SECTION (FIX 1) */}
           <div className="flex-1 flex flex-col justify-center max-w-lg space-y-6 text-left relative z-10 animate-in fade-in slide-in-from-left-6 duration-500">
-            <div className="p-3 bg-white/5 border border-white/10 rounded-2xl w-fit flex items-center gap-3 backdrop-blur shadow-xl">
+            <div className="p-3 cyber-glass rounded-2xl w-fit flex items-center gap-3 shadow-xl">
               <img
                 src="https://www.mvgrce.com/sites/default/files/logo.png"
                 alt="MVGR College Logo"
@@ -808,61 +845,61 @@ export default function App() {
                 }}
               />
               <div className="text-left font-sans">
-                <p className="text-[9px] font-mono font-bold text-slate-500 tracking-widest uppercase">Estd 1997</p>
-                <h4 className="text-xs font-black text-white tracking-tight uppercase leading-none">MVGR College</h4>
-                <p className="text-[9px] text-slate-400">Autonomous Institution</p>
+                <p className="text-[9px] font-mono font-bold text-theme-muted-text tracking-widest uppercase">Estd 1997</p>
+                <h4 className="text-sm font-black text-theme-hero-main tracking-tight uppercase leading-none">MVGR College</h4>
+                <p className="text-[9px] text-theme-muted-text">Autonomous Institution</p>
               </div>
             </div>
 
             <div className="space-y-3.5">
-              <h1 className="font-display font-black text-4xl sm:text-5xl lg:text-6xl tracking-tight text-white block uppercase leading-none">
+              <h1 className="font-display font-black text-4xl sm:text-5xl lg:text-6xl tracking-tight text-theme-hero-main block uppercase leading-none">
                 MVGR College <br/>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-violet-500">Student Resource Hub</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-theme-hero-cyan to-theme-hero-violet">Student Resource Hub</span>
               </h1>
-              <p className="text-sm text-slate-400 leading-relaxed font-sans font-medium">
+              <p className="text-sm text-theme-body-text leading-relaxed font-sans font-medium">
                 Academic materials, collaboration, and smart resource management for students and faculty. Access notes, syllabus, term solutions, and file discrepancies instantly.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-800 font-sans text-xs text-slate-400">
-              <div className="space-y-1.5 p-3 rounded-xl bg-slate-900/40 border border-slate-800">
-                <span className="text-cyber-cyan font-bold font-mono">01 // BROWSE DISCOVER</span>
-                <p className="text-[11px] leading-snug text-slate-500">Academic databases, study guides, and notes mapped exactly by term semester.</p>
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-800 font-sans text-xs text-theme-body-text">
+              <div className="space-y-1.5 p-3 rounded-xl cyber-glass">
+                <span className="text-theme-hero-cyan font-extrabold font-mono text-[11px] uppercase tracking-wide">01 // BROWSE DISCOVER</span>
+                <p className="text-[11px] leading-snug text-theme-body-text">Academic databases, study guides, and notes mapped exactly by term semester.</p>
               </div>
-              <div className="space-y-1.5 p-3 rounded-xl bg-slate-900/40 border border-slate-800">
-                <span className="text-cyber-violet font-bold font-mono">02 // REPORT COMPLIANCE</span>
-                <p className="text-[11px] leading-snug text-slate-500">Lodge file discrepancies directly to department coordinators for real-time fixes.</p>
+              <div className="space-y-1.5 p-3 rounded-xl cyber-glass">
+                <span className="text-theme-hero-violet font-extrabold font-mono text-[11px] uppercase tracking-wide">02 // REPORT COMPLIANCE</span>
+                <p className="text-[11px] leading-snug text-theme-body-text">Lodge file discrepancies directly to department coordinators for real-time fixes.</p>
               </div>
             </div>
           </div>
 
           {/* LOGIN CARD COLUMN */}
-          <div className="w-full max-w-md p-6 sm:p-8 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl relative block overflow-hidden box-glow-cyan/5 z-10 self-center animate-in fade-in slide-in-from-right-6 duration-500">
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-cyan-500 via-violet-500 to-rose-500" />
+          <div className="w-full max-w-md p-5 sm:p-6 pb-6 sm:pb-7 rounded-2xl cyber-glass shadow-2xl relative block overflow-hidden z-10 self-center animate-in fade-in slide-in-from-right-6 duration-500">
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-theme-hero-cyan via-theme-hero-violet to-rose-500" />
 
-            <div className="flex flex-col items-center text-center space-y-3 mb-6">
-              <div className="p-3 bg-cyan-500/10 rounded-2xl border border-cyan-500/20 text-cyber-cyan flex items-center justify-center">
-                <Box className="w-7 h-7" />
+            <div className="flex flex-col items-center text-center space-y-2 mb-4">
+              <div className="p-2.5 bg-theme-teal-action/10 rounded-xl border border-theme-teal-action/20 text-theme-teal-action flex items-center justify-center">
+                <Box className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="font-display font-black text-2xl tracking-tight text-white uppercase block leading-none">
+                <h1 className="font-display font-black text-xl tracking-tight text-theme-hero-main uppercase block leading-none">
                   Login
                 </h1>
               </div>
             </div>
 
             {/* Selector Trigger Slider */}
-            <div className="grid grid-cols-2 gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800 mb-6 font-mono text-xs">
+            <div className="grid grid-cols-2 gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800 mb-5 font-mono text-xs">
               <button
                 type="button"
                 onClick={() => {
                   setLoginRole("student");
                   setLoginError("");
                 }}
-                className={`py-2 rounded-lg font-bold uppercase transition flex items-center justify-center gap-1.5 ${
+                className={`py-2 rounded-lg font-bold uppercase transition flex items-center justify-center gap-1.5 border cursor-pointer ${
                   loginRole === "student"
-                    ? "bg-cyan-500/15 text-cyber-cyan border border-cyan-500/20 shadow"
-                    : "text-slate-400 hover:text-white hover:bg-slate-900"
+                    ? "bg-theme-teal-action/10 text-theme-teal-action border-theme-teal-action/25 shadow-sm"
+                    : "text-theme-muted-text border-transparent hover:text-theme-hero-main hover:bg-theme-teal-action/5"
                 }`}
               >
                 Student
@@ -873,10 +910,10 @@ export default function App() {
                   setLoginRole("faculty");
                   setLoginError("");
                 }}
-                className={`py-2 rounded-lg font-bold uppercase transition flex items-center justify-center gap-1.5 ${
+                className={`py-2 rounded-lg font-bold uppercase transition flex items-center justify-center gap-1.5 border cursor-pointer ${
                   loginRole === "faculty"
-                    ? "bg-violet-500/15 text-cyber-violet border border-violet-500/20 shadow"
-                    : "text-slate-400 hover:text-white hover:bg-slate-900"
+                    ? "bg-theme-teal-action/10 text-theme-teal-action border-theme-teal-action/25 shadow-sm"
+                    : "text-theme-muted-text border-transparent hover:text-theme-hero-main hover:bg-theme-teal-action/5"
                 }`}
               >
                 HOD Faculty
@@ -885,11 +922,11 @@ export default function App() {
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="text-xs font-mono text-slate-400 uppercase tracking-widest block mb-1.5 font-bold">
+                <label className="text-xs font-mono text-theme-muted-text uppercase tracking-widest block mb-1.5 font-bold">
                   Institutional Email
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3.5 top-3.5 text-slate-500 font-mono text-xs font-bold uppercase">
+                  <span className="absolute left-3.5 top-3.5 text-theme-muted-text font-mono text-xs font-bold uppercase">
                     @:
                   </span>
                   <input
@@ -898,17 +935,17 @@ export default function App() {
                     placeholder={loginRole === "student" ? "student@mvgr.edu" : "faculty.it@mvgr.edu"}
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3.5 text-sm rounded-lg bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:border-cyan-500 font-mono tracking-wide placeholder-slate-600 block"
+                    className="w-full pl-10 pr-4 py-3 text-sm rounded-lg bg-theme-input-bg border border-theme-input-border text-theme-input-text focus:outline-none focus:border-theme-teal-action font-mono tracking-wide placeholder-theme-input-placeholder block"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-mono text-slate-400 uppercase tracking-widest block mb-1.5 font-bold">
+                <label className="text-xs font-mono text-theme-muted-text uppercase tracking-widest block mb-1.5 font-bold">
                   Password
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3.5 top-3.5 text-slate-500 font-mono text-xs font-extrabold uppercase bg-slate-950 pr-1 select-none">
+                  <span className="absolute left-3.5 top-3.5 text-theme-muted-text font-mono text-xs font-extrabold uppercase pr-1 select-none">
                     ***
                   </span>
                   <input
@@ -917,12 +954,12 @@ export default function App() {
                     placeholder="Enter secure password"
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
-                    className="w-full pl-10 pr-10 py-3.5 text-sm rounded-lg bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:border-cyan-500 font-mono tracking-wide placeholder-slate-600 block"
+                    className="w-full pl-10 pr-10 py-3 text-sm rounded-lg bg-theme-input-bg border border-theme-input-border text-theme-input-text focus:outline-none focus:border-theme-teal-action font-mono tracking-wide placeholder-theme-input-placeholder block"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-3 text-slate-500 hover:text-slate-300 transition-colors focus:outline-none cursor-pointer"
+                    className="absolute right-3.5 top-2.5 text-theme-muted-text hover:text-theme-hero-main transition-colors focus:outline-none cursor-pointer"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
@@ -943,17 +980,17 @@ export default function App() {
               <button
                 type="submit"
                 disabled={loginLoading}
-                className="w-full py-3.5 rounded-lg bg-slate-100 hover:bg-white text-slate-950 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-[0.98] transition-all disabled:opacity-50"
+                className="w-full py-3.5 rounded-lg bg-theme-login-btn-bg hover:bg-theme-login-btn-hover text-theme-login-btn-text text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-[0.98] transition-all disabled:opacity-50"
               >
                 {loginLoading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                    <Loader2 className="w-4 h-4 animate-spin text-theme-login-btn-text" />
                     Authenticating Security Gate...
                   </>
                 ) : (
                   <>
                     Login
-                    <ArrowRight className="w-4 h-4 text-slate-950" />
+                    <ArrowRight className="w-4 h-4 text-theme-login-btn-text" />
                   </>
                 )}
               </button>
@@ -994,6 +1031,8 @@ export default function App() {
               onDismissReport={handleFacultyDismissReport}
               setScreen={setActiveScreen}
               onLogoutClick={() => setLogoutModalOpen(true)}
+              theme={theme}
+              onToggleTheme={toggleTheme}
             />
 
             {/* Inner scroll container layout */}
