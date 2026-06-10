@@ -1,10 +1,9 @@
 import React, { useState } from "react";
 import { Search, SlidersHorizontal, DownloadCloud, Eye, AlertTriangle, X, Check, FileSearch, Loader2, Folder, ArrowLeft } from "lucide-react";
 import { Material, IssueReport, StudentProfile } from "../../types";
-import { EmptyState } from "../../components/EmptyState";
-import { DEPARTMENTS, MATERIAL_CATEGORIES } from "../../mockData";
+import { DEPARTMENTS } from "../../mockData";
 
-interface BrowseViewProps {
+interface QuestionPapersViewProps {
   user: StudentProfile;
   materials: Material[];
   onDownload: (material: Material) => void;
@@ -12,14 +11,21 @@ interface BrowseViewProps {
   onSubmitReport: (report: Omit<IssueReport, "id" | "studentName" | "studentRoll" | "reportDate" | "status">) => void;
 }
 
-export const BrowseView: React.FC<BrowseViewProps> = ({
+const QUESTION_PAPER_CATEGORIES = [
+  "Mid Question Paper",
+  "Semester Regular Question Paper",
+  "Semester Supply Question Paper",
+  "Model Question Paper"
+];
+
+export const QuestionPapersView: React.FC<QuestionPapersViewProps> = ({
   user,
   materials,
   onDownload,
   triggerPreview,
   onSubmitReport,
 }) => {
-  // Query Filters
+  // Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDept, setSelectedDept] = useState("All");
   const [selectedYear, setSelectedYear] = useState("All");
@@ -27,7 +33,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
   const [selectedCat, setSelectedCat] = useState("All");
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
 
-  // Report issue flow state
+  // Issue reporting panel state
   const [reportingMaterial, setReportingMaterial] = useState<Material | null>(null);
   const [issueType, setIssueType] = useState<IssueReport["issueType"]>("Wrong PDF");
   const [issueDesc, setIssueDesc] = useState("");
@@ -40,30 +46,20 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
     try {
       await onDownload(mat);
     } catch (err) {
-      console.error("Direct download failed in browse view:", err);
+      console.error("Direct download failed in Question Papers view:", err);
     } finally {
       setDownloadingId(null);
     }
   };
 
-  const resetFilters = () => {
-    setSearchQuery("");
-    setSelectedDept("All");
-    setSelectedYear("All");
-    setSelectedSem("All");
-    setSelectedCat("All");
-    setSelectedSubject(null);
-  };
-
-  // Filter logic: Exclude Question Papers from Study Materials Browse view
-  const studyMaterialsOnly = materials.filter(
-    (m) =>
-      !["Mid Question Paper", "Semester Regular Question Paper", "Semester Supply Question Paper", "Model Question Paper"].includes(m.category)
+  // Only material where category is one of the Question Paper categories
+  const baseQuestionPapers = materials.filter((m) =>
+    QUESTION_PAPER_CATEGORIES.includes(m.category)
   );
 
-  const filteredMaterials = studyMaterialsOnly.filter((m) => {
-    const matchesSearch = 
-      m.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+  const filteredQuestionPapers = baseQuestionPapers.filter((m) => {
+    const matchesSearch =
+      m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       m.fileName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (m.subject || "General").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (m.unit || "General").toLowerCase().includes(searchQuery.toLowerCase());
@@ -75,9 +71,9 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
     return matchesSearch && matchesDept && matchesYear && matchesSem && matchesCat;
   });
 
-  // Dynamic Grouping of Filtered Materials by Subject
+  // Dynamic Grouping
   const groups: { [subject: string]: Material[] } = {};
-  filteredMaterials.forEach((mat) => {
+  filteredQuestionPapers.forEach((mat) => {
     const subName = mat.subject?.trim() || "General";
     if (!groups[subName]) {
       groups[subName] = [];
@@ -109,7 +105,6 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
     setIssueDesc("");
     setIssueType("Wrong PDF");
 
-    // Success Toast
     setToastMessage("TICKET FILED // DISCREPANCY RECORDED FOR REVIEW");
     setTimeout(() => setToastMessage(""), 4000);
   };
@@ -117,7 +112,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
   const departments = ["All", ...DEPARTMENTS];
   const years = ["All", "1", "2", "3", "4"];
   const semesters = ["All", "1", "2"];
-  const categories = ["All", ...MATERIAL_CATEGORIES];
+  const categories = ["All", ...QUESTION_PAPER_CATEGORIES];
 
   return (
     <div className="space-y-6 relative">
@@ -134,7 +129,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
         <div className="flex items-center gap-2 pb-2 border-b border-slate-800">
           <SlidersHorizontal className="w-4 h-4 text-cyber-cyan" />
           <h3 className="font-display font-bold text-sm text-slate-200 tracking-wide uppercase">
-            Materials Navigator Dashboard Filters
+            Question Papers Navigator Filters
           </h3>
         </div>
 
@@ -148,7 +143,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
               <Search className="absolute left-3 top-3 w-4.5 h-4.5 text-slate-500" />
               <input
                 type="text"
-                placeholder="Search by keywords or file tag..."
+                placeholder="Search papers by keyword or subject..."
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -222,10 +217,10 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
             </select>
           </div>
 
-          {/* Category Filter */}
+          {/* Paper Type Filter */}
           <div className="sm:col-span-1 lg:col-span-2">
             <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-500 block mb-1">
-              Category
+              Paper Type
             </label>
             <select
               value={selectedCat}
@@ -237,7 +232,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
             >
               {categories.map((c) => (
                 <option key={c} value={c}>
-                  {c === "All" ? "All Categories" : c}
+                  {c === "All" ? "All Papers" : c.replace(" Question Paper", "")}
                 </option>
               ))}
             </select>
@@ -246,7 +241,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
       </div>
 
       {/* Grid listing */}
-      {filteredMaterials.length > 0 ? (
+      {filteredQuestionPapers.length > 0 ? (
         isViewingSubject ? (
           <div className="space-y-4">
             {/* Header with back button */}
@@ -260,7 +255,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
                     {selectedSubject}
                   </h3>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Showing {currentSubjectMaterials.length} materials
+                    Showing {currentSubjectMaterials.length} question papers
                   </p>
                 </div>
               </div>
@@ -311,15 +306,17 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
                         DATE: <span className="text-slate-400">{new Date(mat.uploadDate).toLocaleDateString()}</span>
                       </div>
                       <div>
-                        CAT: <span className="text-cyber-cyan font-bold truncate">{mat.category}</span>
+                        TYPE: <span className="text-cyber-cyan font-bold truncate">{mat.category.replace(" Question Paper", "")}</span>
                       </div>
                       <div className="col-span-2 border-t border-slate-900 pt-1 mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-slate-400">
                         <div>
                           SUBJECT: <span className="text-slate-300 font-semibold">{mat.subject || "General"}</span>
                         </div>
-                        <div>
-                          UNIT: <span className="text-slate-300 font-semibold">{mat.unit || "General"}</span>
-                        </div>
+                        {mat.unit && (
+                          <div>
+                            UNIT/LESSON: <span className="text-slate-300 font-semibold">{mat.unit}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -369,11 +366,11 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {subjectsList.map((subj) => {
               const mats = groups[subj];
-              const uniqueUnits = Array.from(new Set(mats.map(m => m.unit?.trim() || "General")))
-                .filter(u => u !== "" && u.toLowerCase() !== "general");
-              const unitsText = uniqueUnits.length > 0 
-                ? `Units: ${uniqueUnits.join(", ")}` 
-                : "General Unit";
+              const uniqueCategories = Array.from(new Set(mats.map(m => m.category)))
+                .map(cat => cat.replace(" Question Paper", ""));
+              const summaryText = uniqueCategories.length > 0
+                ? `Types: ${uniqueCategories.join(", ")}`
+                : "Papers Available";
 
               return (
                 <div
@@ -390,13 +387,13 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
                         {subj}
                       </h4>
                       <p className="text-xs text-slate-400 mt-1">
-                        {mats.length} {mats.length === 1 ? "material" : "materials"} total
+                        {mats.length} {mats.length === 1 ? "document" : "documents"} total
                       </p>
                     </div>
                   </div>
                   <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between text-[11px] font-mono text-slate-500">
-                    <span className="truncate max-w-[80%]">
-                      {unitsText}
+                    <span className="truncate max-w-[80%]" title={summaryText}>
+                      {summaryText}
                     </span>
                     <span className="text-cyber-cyan opacity-0 group-hover:opacity-100 transition-opacity font-bold">
                       OPEN &rarr;
@@ -408,7 +405,12 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
           </div>
         )
       ) : (
-        <EmptyState type="no-materials" onAction={resetFilters} />
+        <div className="text-center py-12 p-8 rounded-2xl border border-slate-800 bg-slate-900/10">
+          <FileSearch className="w-12 h-12 text-slate-600 mx-auto mb-4 animate-bounce" />
+          <p className="text-sm text-slate-400 font-medium font-mono uppercase tracking-wide">
+            No question papers found for selected filters.
+          </p>
+        </div>
       )}
 
       {/* Report Issue Modal Overlay */}

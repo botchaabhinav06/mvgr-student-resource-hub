@@ -25,6 +25,7 @@ import { DashboardView as StudentDashboard } from "./views/student/DashboardView
 import { BrowseView as StudentBrowse } from "./views/student/BrowseView";
 import { ReportsView as StudentReports } from "./views/student/ReportsView";
 import { ProfileView as StudentProfileView } from "./views/student/ProfileView";
+import { QuestionPapersView as StudentQuestionPapers } from "./views/student/QuestionPapersView";
 
 // Views faculty layout
 import { DashboardView as FacultyDashboard } from "./views/faculty/DashboardView";
@@ -642,6 +643,16 @@ export default function App() {
         case "STUDENT_BROWSE":
           return (
             <StudentBrowse
+              user={currentUser as StudentProfile}
+              materials={materials}
+              onDownload={handleDownloadMaterial}
+              triggerPreview={(m) => setPreviewingMaterial(m)}
+              onSubmitReport={handleReportIssue}
+            />
+          );
+        case "STUDENT_QUESTION_PAPERS":
+          return (
+            <StudentQuestionPapers
               user={currentUser as StudentProfile}
               materials={materials}
               onDownload={handleDownloadMaterial}

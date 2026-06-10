@@ -11,6 +11,21 @@ interface UploadViewProps {
   prefilledSubject?: string;
 }
 
+const STUDY_MATERIAL_CATEGORIES = [
+  "Lesson PDF",
+  "Lesson PPT / Slides PDF",
+  "Subject Syllabus Copy",
+  "Lab Manual",
+  "Notes / Handwritten Notes"
+];
+
+const QUESTION_PAPER_CATEGORIES = [
+  "Mid Question Paper",
+  "Semester Regular Question Paper",
+  "Semester Supply Question Paper",
+  "Model Question Paper"
+];
+
 export const UploadView: React.FC<UploadViewProps> = ({
   user,
   onUploadSuccess,
@@ -19,12 +34,22 @@ export const UploadView: React.FC<UploadViewProps> = ({
 }) => {
   // Form coordinates
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState<string>(MATERIAL_CATEGORIES[0]);
+  const [uploadType, setUploadType] = useState<"study_material" | "question_paper">("study_material");
+  const [category, setCategory] = useState<string>(STUDY_MATERIAL_CATEGORIES[0]);
   const [department, setDepartment] = useState(user.department); // default to user dept
   const [year, setYear] = useState(3);
   const [semester, setSemester] = useState(2);
   const [subject, setSubject] = useState(prefilledSubject || "");
   const [unit, setUnit] = useState("");
+
+  const handleUploadTypeChange = (type: "study_material" | "question_paper") => {
+    setUploadType(type);
+    if (type === "study_material") {
+      setCategory(STUDY_MATERIAL_CATEGORIES[0]);
+    } else {
+      setCategory(QUESTION_PAPER_CATEGORIES[0]);
+    }
+  };
 
   useEffect(() => {
     if (prefilledSubject) {
@@ -263,6 +288,36 @@ export const UploadView: React.FC<UploadViewProps> = ({
 
         {/* Meta Info Form */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 font-sans">
+          <div className="md:col-span-2">
+            <label className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wide block mb-1.5 animate-pulse">
+              Upload Type / Resource Category
+            </label>
+            <div className="grid grid-cols-2 gap-3 p-1.5 rounded-xl bg-slate-950/80 border border-slate-800">
+              <button
+                type="button"
+                onClick={() => handleUploadTypeChange("study_material")}
+                className={`py-2.5 text-xs font-mono font-bold tracking-wider uppercase rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  uploadType === "study_material"
+                    ? "bg-violet-600/90 text-white shadow-md shadow-violet-600/20 border border-violet-500/20"
+                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/50"
+                }`}
+              >
+                Study Material
+              </button>
+              <button
+                type="button"
+                onClick={() => handleUploadTypeChange("question_paper")}
+                className={`py-2.5 text-xs font-mono font-bold tracking-wider uppercase rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  uploadType === "question_paper"
+                    ? "bg-violet-600/90 text-white shadow-md shadow-violet-600/20 border border-violet-500/20"
+                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/50"
+                }`}
+              >
+                Question Paper
+              </button>
+            </div>
+          </div>
+
           <div>
             <label className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wide block mb-1.5">
               Material Title Name
@@ -286,9 +341,9 @@ export const UploadView: React.FC<UploadViewProps> = ({
               value={category}
               disabled={uploading}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-violet-500 cursor-pointer"
+              className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-violet-500 cursor-pointer font-sans"
             >
-              {MATERIAL_CATEGORIES.map((cat) => (
+              {(uploadType === "study_material" ? STUDY_MATERIAL_CATEGORIES : QUESTION_PAPER_CATEGORIES).map((cat) => (
                 <option key={cat} value={cat}>
                   {cat}
                 </option>

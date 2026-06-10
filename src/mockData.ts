@@ -15,21 +15,11 @@ export const DEPARTMENTS = [
 ] as const;
 
 export const MATERIAL_CATEGORIES = [
-  "Lesson PPT",
   "Lesson PDF",
-  "Previous Question Paper",
-  "Model Question Paper",
+  "Lesson PPT / Slides PDF",
+  "Subject Syllabus Copy",
   "Lab Manual",
-  "Assignment Material",
-  "Notes / Handwritten Notes",
-  "Reference Material",
-  "Syllabus Copy",
-  "Mini Project Material",
-  "Seminar Material",
-  "Case Study Material",
-  "Tutorial Sheet",
-  "Practical Record Format",
-  "Other Material"
+  "Notes / Handwritten Notes"
 ] as const;
 
 export const initialStudents: StudentProfile[] = [

@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutDashboard, BookOpen, DownloadCloud, FileText, User, LogOut, X, Box } from "lucide-react";
+import { LayoutDashboard, BookOpen, DownloadCloud, FileText, User, LogOut, X, Box, GraduationCap } from "lucide-react";
 import { ActiveScreen } from "../types";
 
 interface StudentSidebarProps {
@@ -27,6 +27,11 @@ export const StudentSidebar: React.FC<StudentSidebarProps> = ({
       label: "Browse Materials",
       icon: BookOpen,
       screen: "STUDENT_BROWSE" as ActiveScreen,
+    },
+    {
+      label: "Question Papers",
+      icon: GraduationCap,
+      screen: "STUDENT_QUESTION_PAPERS" as ActiveScreen,
     },
     {
       label: "Reports",

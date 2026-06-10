@@ -13,6 +13,18 @@ interface ManageViewProps {
   onUploadToSubject?: (subject: string) => void;
 }
 
+const ALL_EDIT_CATEGORIES = [
+  "Lesson PDF",
+  "Lesson PPT / Slides PDF",
+  "Subject Syllabus Copy",
+  "Lab Manual",
+  "Notes / Handwritten Notes",
+  "Mid Question Paper",
+  "Semester Regular Question Paper",
+  "Semester Supply Question Paper",
+  "Model Question Paper"
+];
+
 export const ManageView: React.FC<ManageViewProps> = ({
   materials,
   onDeleteMaterial,
@@ -422,9 +434,12 @@ export const ManageView: React.FC<ManageViewProps> = ({
                   <select
                     value={editCategory}
                     onChange={(e) => setEditCategory(e.target.value)}
-                    className="w-full px-2 py-2 rounded bg-slate-950 border border-slate-800 text-xs text-slate-300 focus:outline-none cursor-pointer"
+                    className="w-full px-2 py-2 rounded bg-slate-950 border border-slate-800 text-xs text-slate-300 focus:outline-none cursor-pointer font-sans"
                   >
-                    {MATERIAL_CATEGORIES.map((cat) => (
+                    {!ALL_EDIT_CATEGORIES.includes(editCategory) && editCategory && (
+                      <option value={editCategory}>{editCategory} (Legacy/Other)</option>
+                    )}
+                    {ALL_EDIT_CATEGORIES.map((cat) => (
                       <option key={cat} value={cat}>
                         {cat}
                       </option>
