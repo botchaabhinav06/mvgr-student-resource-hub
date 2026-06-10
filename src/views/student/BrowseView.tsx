@@ -234,7 +234,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
                     DATE: <span className="text-slate-400">{new Date(mat.uploadDate).toLocaleDateString()}</span>
                   </div>
                   <div>
-                    DOWNLOADS: <span className="text-cyber-cyan font-bold">{mat.downloadsCount}</span>
+                    CAT: <span className="text-cyber-cyan font-bold truncate">{mat.category}</span>
                   </div>
                 </div>
               </div>

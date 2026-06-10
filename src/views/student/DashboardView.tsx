@@ -71,8 +71,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             Welcome, <span className="text-cyber-cyan font-bold">{user.fullName}</span>!
           </h2>
           <p className="text-xs sm:text-sm text-slate-400 max-w-xl leading-relaxed">
-            Your personal hub is synched with the **{user.department} Department** catalog for 
-            **Year {user.currentYear}, Semester {user.currentSemester}**.
+            Access your {user.department} Department course materials for Year {user.currentYear}, Semester {user.currentSemester} in one place.
           </p>
           <div className="flex flex-wrap gap-4 pt-2">
             <div className="flex items-center gap-2 text-xs font-mono text-slate-300 bg-slate-950/60 px-3 py-1.5 rounded-lg border border-slate-800">
@@ -81,19 +80,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
             <div className="flex items-center gap-2 text-xs font-mono text-slate-300 bg-slate-950/60 px-3 py-1.5 rounded-lg border border-slate-800">
               <Calendar className="w-4 h-4 text-cyber-cyan" />
-              Syllabus Year: <span className="text-cyber-cyan font-semibold">{user.currentYear} - S{user.currentSemester}</span>
+              Current Year: <span className="text-cyber-cyan font-semibold">{user.currentYear} - S{user.currentSemester}</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Cyber Student Telemetry Metrics (Strictly Personalized) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 font-sans">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 font-sans">
         
         {/* Metric 1: Materials available in student's specific curriculum scope */}
         <div className="p-5 rounded-xl cyber-glass border border-slate-800 flex items-center justify-between box-glow-cyan">
           <div className="space-y-1">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block">MY CURRICULUM NODES</span>
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block">My Curriculum Notes</span>
             <span className="text-3xl font-display font-bold text-slate-100 block">{personalizedMaterials.length}</span>
             <span className="text-[10px] font-mono text-slate-500 block">Year {user.currentYear} • Sem {user.currentSemester}</span>
           </div>
@@ -102,22 +101,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* Metric 2: Total Session Downloads */}
-        <div className="p-5 rounded-xl cyber-glass border border-slate-800 flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block">MY SESSION DOWNLOADS</span>
-            <span className="text-3xl font-display font-bold text-cyber-cyan block glow-cyan">{recordedDownloadsCount}</span>
-            <span className="text-[10px] font-mono text-slate-500 block">Downloaded this session</span>
-          </div>
-          <div className="p-3 bg-cyan-500/20 rounded-xl text-cyber-cyan border border-cyber-cyan/25">
-            <Download className="w-6 h-6 animate-bounce" />
-          </div>
-        </div>
-
         {/* Metric 3: Student's submitted reports ticketing tracking summary */}
         <div className="p-5 rounded-xl cyber-glass border border-slate-800 flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block">MY DISCREPANCY TICKETS</span>
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block">My Reports</span>
             <span className="text-2xl font-display font-bold text-slate-100 block">
               {reports.length} <span className="text-xs text-slate-500 font-normal">filed</span>
             </span>
@@ -141,7 +128,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="flex items-center justify-between">
             <h3 className="font-display font-bold text-base text-slate-100 flex items-center gap-2">
               <Compass className="w-4.5 h-4.5 text-cyber-cyan" />
-              Tailored Course Materials
+              All Course Materials
             </h3>
             <span className="text-xs font-mono text-slate-400">
               Department Match Found
@@ -233,51 +220,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             )}
           </div>
 
-          {/* Popular materials matching student scope */}
-          <div className="p-5 rounded-xl border border-slate-800 bg-slate-900/40 space-y-4">
-            <h4 className="font-display font-bold text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wider">
-              <TrendingUp className="w-4 h-4 text-cyan-400" />
-              Popular Materials (My Scope)
-            </h4>
-
-            {popularMaterialsInScope.length > 0 ? (
-              <div className="space-y-3">
-                {popularMaterialsInScope.map((file) => (
-                  <div 
-                    key={file.id} 
-                    className="p-3 rounded-lg bg-slate-950/60 border border-slate-850 flex items-center justify-between gap-4"
-                  >
-                    <div className="min-w-0 flex-1 space-y-0.5">
-                      <span className="font-semibold text-slate-300 block truncate text-xs">
-                        {file.title}
-                      </span>
-                      <span className="text-[9px] font-mono text-slate-500 block">
-                        CAT: {file.category}
-                      </span>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <span className="text-[10px] font-mono font-bold text-cyber-cyan bg-cyan-500/5 px-2 py-0.5 rounded border border-cyan-500/10">
-                        {file.downloadsCount} downloads
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-[11px] text-slate-500 italic">No popular resources listed yet.</p>
-            )}
-          </div>
-
           {/* Core Issue Ticket Status Tracking list for Student */}
           <div className="p-5 rounded-xl border border-slate-800 bg-slate-900/40 space-y-4">
             <h4 className="font-display font-bold text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wider">
               <FileText className="w-4 h-4 text-cyan-400" />
-              My Ticket Discrepancies
+              My Reports
             </h4>
 
             {reports.length > 0 ? (
-              <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
-                {reports.slice(0, 4).map((ticket) => (
+              <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
+                {reports.slice(0, 6).map((ticket) => (
                   <div 
                     key={ticket.id} 
                     className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-850 flex items-start justify-between gap-2 text-xs"
@@ -316,24 +268,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <p className="text-[11px] text-slate-500 font-medium">No reports submitted yet.</p>
               </div>
             )}
-          </div>
-
-          {/* Academic Help Desk Info Widget */}
-          <div className="p-5 rounded-xl border border-slate-800 bg-slate-900/40 relative overflow-hidden flex flex-col justify-between">
-            <div className="space-y-3">
-              <h4 className="font-display font-bold text-slate-100 flex items-center gap-1.5 text-xs uppercase tracking-wider">
-                <HelpCircle className="w-4 h-4 text-cyan-400" />
-                Academic Help Desk
-              </h4>
-              <div className="space-y-2">
-                <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800 text-xs text-slate-400 space-y-1">
-                  <p className="font-mono text-cyan-400 font-semibold uppercase text-[10px]">How do I report files?</p>
-                  <p className="leading-relaxed">
-                    Go to "Browse Materials", click "Report Issue", select type and explain details. Department HOD is updated instantly.
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
 
         </div>
