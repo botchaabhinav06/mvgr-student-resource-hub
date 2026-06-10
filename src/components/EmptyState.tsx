@@ -14,21 +14,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ type, onAction }) => {
           <div className="w-16 h-16 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyber-cyan mb-4 animate-pulse">
             <SearchX className="w-8 h-8" />
           </div>
-          <h3 className="font-display font-bold text-xl text-slate-100 mb-2">
+          <h3 className="font-display font-bold text-xl text-slate-100">
             No materials found for selected filters.
           </h3>
-          <p className="text-sm text-slate-400 mb-6 max-w-sm">
-            Try resetting your filters or searches to explore resources uploaded by public moderators or our academic faculty HOD.
-          </p>
-          {onAction && (
-            <button
-              onClick={onAction}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-cyan-500/20 text-cyber-cyan border border-cyan-500/40 text-sm font-medium hover:bg-cyan-500/30 transition-all active:scale-95"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Reset Active Filter Criteria
-            </button>
-          )}
         </div>
       );
 

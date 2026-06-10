@@ -39,11 +39,6 @@ export const FacultySidebar: React.FC<FacultySidebarProps> = ({
       screen: "FACULTY_REPORTS" as ActiveScreen,
     },
     {
-      label: "Download Analytics",
-      icon: BarChart3,
-      screen: "FACULTY_ANALYTICS" as ActiveScreen,
-    },
-    {
       label: "Profile Settings",
       icon: UserCheck,
       screen: "FACULTY_PROFILE" as ActiveScreen,

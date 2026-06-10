@@ -34,7 +34,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
       case "STUDENT_BROWSE":
         return "Academic Catalog Repository";
       case "STUDENT_REPORTS":
-        return "Submitted Tickets Queue";
+        return "My Reports";
       case "STUDENT_PROFILE":
         return "Student Profile Profile Card";
       case "FACULTY_DASHBOARD":
@@ -44,9 +44,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
       case "FACULTY_MANAGE":
         return "Academic Materials Inventory";
       case "FACULTY_REPORTS":
-        return "Issue Discrepancy Dispatcher";
-      case "FACULTY_ANALYTICS":
-        return "Consolidated Download Analytics";
+        return "Student Reports Center";
       case "FACULTY_PROFILE":
         return "Faculty Account Configuration";
       default:
@@ -192,14 +190,14 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
                         }}
                         className="w-full mt-2 py-2 rounded-lg bg-slate-950 hover:bg-slate-850 border border-slate-800 text-xs font-mono font-bold text-cyber-cyan text-center block"
                       >
-                        VIEW ALL DISCREPANCY REPORTS
+                        VIEW ALL REPORTS
                       </button>
                     </>
                   ) : (
                     // STUDENT NOTIFICATIONS
                     <>
                       <div className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-widest px-1">
-                        YOUR REGISTERED DISCREPANCY FLOWS
+                        YOUR SUBMITTED REPORTS
                       </div>
                       {reports.filter(r => r.studentRoll === (user as StudentProfile).registerNumber).length > 0 ? (
                         reports.filter(r => r.studentRoll === (user as StudentProfile).registerNumber).slice(0, 3).map((rep) => (

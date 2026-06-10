@@ -79,5 +79,4 @@ export type ActiveScreen =
   | "FACULTY_UPLOAD"
   | "FACULTY_MANAGE"
   | "FACULTY_REPORTS"
-  | "FACULTY_ANALYTICS"
   | "FACULTY_PROFILE";

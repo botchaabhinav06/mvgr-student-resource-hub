@@ -31,7 +31,6 @@ import { DashboardView as FacultyDashboard } from "./views/faculty/DashboardView
 import { UploadView as FacultyUpload } from "./views/faculty/UploadView";
 import { ManageView as FacultyManage } from "./views/faculty/ManageView";
 import { ReportsView as FacultyReports } from "./views/faculty/ReportsView";
-import { AnalyticsView as FacultyAnalytics } from "./views/faculty/AnalyticsView";
 import { ProfileView as FacultyProfileView } from "./views/faculty/ProfileView";
 
 const mapFirestoreUser = (uid: string, data: any): StudentProfile | FacultyProfile => {
@@ -700,8 +699,6 @@ export default function App() {
               setScreen={setActiveScreen}
             />
           );
-        case "FACULTY_ANALYTICS":
-          return <FacultyAnalytics materials={materials} reports={reports} users={allUsers} />;
         case "FACULTY_PROFILE":
           return (
             <FacultyProfileView

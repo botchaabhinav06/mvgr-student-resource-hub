@@ -71,7 +71,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="font-display font-medium text-lg md:text-xl text-slate-100 uppercase tracking-tight">
-            Academic Discrepancy Dispatcher
+            Student Reports Center
           </h2>
           <p className="text-xs text-slate-400 mt-1 max-w-xl">
             Undergraduates report files that are illegible, tagged in incorrect syllabus slots, or broken. Monitor and inspect reported logs in real-time.

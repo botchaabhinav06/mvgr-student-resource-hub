@@ -33,10 +33,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             MVGR CORE FACULTY PORTAL TERMINAL SECURED
           </div>
           <h2 className="font-display font-medium text-2xl md:text-3xl text-slate-100 leading-tight">
-            Greetings, <span className="text-cyber-violet font-bold">{user.facultyName}</span>!
+            Welcome, <span className="text-cyber-violet font-bold">{user.facultyName}</span>!
           </h2>
           <p className="text-sm text-slate-400 max-w-xl leading-relaxed">
-            Welcome to the Course Resource HOD system panel. Easily compile, upload, and inventory materials to facilitate seamless accessibility for our students.
+            Manage course materials, review student reports, and keep academic resources updated for your department.
           </p>
           <div className="flex flex-wrap gap-4 pt-2 font-mono">
             <div className="flex items-center gap-2 text-xs text-slate-300 bg-slate-950/60 px-3 py-1.5 rounded-lg border border-slate-800">
@@ -50,7 +50,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* Telemetry Metric Codes */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 font-sans">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 font-sans">
         <div className="p-5 rounded-xl cyber-glass border border-slate-800 flex items-center justify-between box-glow-violet">
           <div className="space-y-1">
             <span className="text-xs font-mono uppercase tracking-wider text-slate-400 block">MY UPLOADED INVENTORY</span>
@@ -64,18 +64,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         <div className="p-5 rounded-xl cyber-glass border border-slate-800 flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-xs font-mono uppercase tracking-wider text-slate-400 block">TOTAL CATALOG CLICKS</span>
-            <span className="text-3xl font-display font-bold text-cyber-violet block glow-violet">{totalDownloads}</span>
-            <span className="text-[10px] font-mono text-slate-500 block">Accumulated dynamic clicks</span>
-          </div>
-          <div className="p-3 bg-violet-500/20 rounded-xl text-cyber-violet border border-cyber-violet/25">
-            <FileBarChart className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="p-5 rounded-xl cyber-glass border border-slate-800 flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-xs font-mono uppercase tracking-wider text-slate-400 block">UNRESOLVED TICKETS STATUS</span>
+            <span className="text-xs font-mono uppercase tracking-wider text-slate-400 block">Unresolved Reports Status</span>
             <span className="text-3xl font-display font-bold text-rose-400 block">{activeReports}</span>
             <span className="text-[10px] font-mono text-slate-500 block">Requiring immediate audit action</span>
           </div>
