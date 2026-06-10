@@ -57,7 +57,11 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
 
   // Filter logic
   const filteredMaterials = materials.filter((m) => {
-    const matchesSearch = m.title.toLowerCase().includes(searchQuery.toLowerCase()) || m.fileName.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = 
+      m.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      m.fileName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (m.subject || "General").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (m.unit || "General").toLowerCase().includes(searchQuery.toLowerCase());
     const matchesDept = selectedDept === "All" || m.department === selectedDept;
     const matchesYear = selectedYear === "All" || m.year.toString() === selectedYear;
     const matchesSem = selectedSem === "All" || m.semester.toString() === selectedSem;
