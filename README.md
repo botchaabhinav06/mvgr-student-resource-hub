@@ -8,6 +8,8 @@ A secure, centralized academic resource sharing platform tailored for the **Maha
 Explore the live deployed platform here:  
 👉 **[https://mvgr-student-resource-hub.vercel.app](https://mvgr-student-resource-hub.vercel.app)**
 
+**Status:** Live deployed and demo-ready.
+
 ---
 
 ## 📌 Problem Statement
@@ -129,10 +131,3 @@ In a full institutional production version, the bucket should be changed to priv
 * **Push Notifications Service**: Register service-worker web push alerts to notify students of exam-focused preparation changes.
 * **Light / Dark Canvas Toggles**: Add accessible standard color themes for adaptable viewing preferences.
 * **Localized PDF Markup**: Incorporate inline PDF annotation tools to take student digital notes on course slides natively.
-
----
-
-## 📈 Project Status & Sign-off
-* **Phase 8 (Live Deployment & Verification)**: **100% COMPLETE & LOCKED**
-* **Phase 9 (Presentation & Deliverable Foundation)**: **IN PROGRESS**
-* **Validation Build**: All strict build checks and compilers pass with **zero warnings/errors**.
