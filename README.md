@@ -111,16 +111,15 @@ Below variables must be registered manually on Vercel Dashboard Settings to secu
 
 ---
 
-## ⚠️ MVP Security Architecture & Hardening Guide
-> [!WARNING]
-> While optimized for rapid prototyping and validation, the **Supabase Storage bucket (`materials-pdfs`) is configured with public properties** and functions alongside low-privilege client-side publishable keys. 
-> 
-> *Exposure Risk*: Direct link capture allows public material file views.
-> 
-> **Institutional Production Upgrade Protocol:**
-> 1. Toggle storage buckets from **Public** to **Private** inside the Supabase Console.
-> 2. Implement an Edge script or a secure backend route to generate temporary, short-lived **Signed URLs** dynamically.
-> 3. Enforce client verification parameters: query and validate client bearer **Firebase ID Tokens** at the api gateway before serving signed asset streams.
+## MVP Storage Note & Future Hardening
+The current MVP/demo version uses a public Supabase Storage bucket named materials-pdfs to support simple PDF preview and download flows. This is acceptable for demo and testing. Anyone with the exact public PDF URL may access the file.
+
+In a full institutional production version, the bucket should be changed to private storage with signed URLs and backend/Edge Function based Firebase ID token verification.
+
+**Institutional Production Upgrade Protocol:**
+1. Toggle storage buckets from **Public** to **Private** inside the Supabase Console.
+2. Implement an Edge script or a secure backend route to generate temporary, short-lived **Signed URLs** dynamically.
+3. Enforce client verification parameters: query and validate client bearer **Firebase ID Tokens** at the api gateway before serving signed asset streams.
 
 ---
 
