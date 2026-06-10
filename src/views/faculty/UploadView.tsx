@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { UploadCloud, File, AlertCircle, Sparkles, CheckCircle, Loader2 } from "lucide-react";
 import { Material, FacultyProfile, ActiveScreen } from "../../types";
 import { DEPARTMENTS, MATERIAL_CATEGORIES } from "../../mockData";
@@ -8,12 +8,14 @@ interface UploadViewProps {
   user: FacultyProfile;
   onUploadSuccess: (material: Omit<Material, "uploadedBy" | "uploadedByName" | "uploadDate" | "downloadsCount"> & { id: string; storagePath: string; storageProvider: string }) => void;
   setScreen: (screen: ActiveScreen) => void;
+  prefilledSubject?: string;
 }
 
 export const UploadView: React.FC<UploadViewProps> = ({
   user,
   onUploadSuccess,
   setScreen,
+  prefilledSubject,
 }) => {
   // Form coordinates
   const [title, setTitle] = useState("");
@@ -21,8 +23,14 @@ export const UploadView: React.FC<UploadViewProps> = ({
   const [department, setDepartment] = useState(user.department); // default to user dept
   const [year, setYear] = useState(3);
   const [semester, setSemester] = useState(2);
-  const [subject, setSubject] = useState("");
+  const [subject, setSubject] = useState(prefilledSubject || "");
   const [unit, setUnit] = useState("");
+
+  useEffect(() => {
+    if (prefilledSubject) {
+      setSubject(prefilledSubject);
+    }
+  }, [prefilledSubject]);
   
   // Real PDF State coordinates
   const [rawFile, setRawFile] = useState<File | null>(null);

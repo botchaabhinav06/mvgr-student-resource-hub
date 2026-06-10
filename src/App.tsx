@@ -84,6 +84,7 @@ export default function App() {
 
   // Routing State
   const [activeScreen, setActiveScreen] = useState<ActiveScreen>("STUDENT_DASHBOARD");
+  const [facultyUploadPrefilledSubject, setFacultyUploadPrefilledSubject] = useState<string | null>(null);
 
   // UX modal triggers
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -682,7 +683,13 @@ export default function App() {
             <FacultyUpload
               user={currentUser as FacultyProfile}
               onUploadSuccess={handleFacultyUploadSuccess}
-              setScreen={setActiveScreen}
+              setScreen={(screen) => {
+                if (screen !== "FACULTY_UPLOAD") {
+                  setFacultyUploadPrefilledSubject(null);
+                }
+                setActiveScreen(screen);
+              }}
+              prefilledSubject={facultyUploadPrefilledSubject || undefined}
             />
           );
         case "FACULTY_MANAGE":
@@ -691,8 +698,17 @@ export default function App() {
               materials={materials}
               onDeleteMaterial={handleFacultyDeleteMaterial}
               onUpdateMaterial={handleFacultyUpdateMaterial}
-              setScreen={setActiveScreen}
+              setScreen={(screen) => {
+                if (screen !== "FACULTY_UPLOAD") {
+                  setFacultyUploadPrefilledSubject(null);
+                }
+                setActiveScreen(screen);
+              }}
               triggerPreview={(m) => setPreviewingMaterial(m)}
+              onUploadToSubject={(subj) => {
+                setFacultyUploadPrefilledSubject(subj);
+                setActiveScreen("FACULTY_UPLOAD");
+              }}
             />
           );
         case "FACULTY_REPORTS":

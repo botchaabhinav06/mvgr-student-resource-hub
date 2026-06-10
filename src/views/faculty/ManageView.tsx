@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Search, Edit2, Trash2, Calendar, FileText, Download, X, Save, AlertTriangle, Eye, CheckCircle2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Search, Edit2, Trash2, Calendar, FileText, Download, X, Save, AlertTriangle, Eye, CheckCircle2, Folder, ArrowLeft, UploadCloud } from "lucide-react";
 import { Material, ActiveScreen } from "../../types";
 import { EmptyState } from "../../components/EmptyState";
 import { DEPARTMENTS, MATERIAL_CATEGORIES } from "../../mockData";
@@ -10,6 +10,7 @@ interface ManageViewProps {
   onUpdateMaterial: (updated: Material) => void;
   setScreen: (screen: ActiveScreen) => void;
   triggerPreview: (material: Material) => void;
+  onUploadToSubject?: (subject: string) => void;
 }
 
 export const ManageView: React.FC<ManageViewProps> = ({
@@ -18,8 +19,10 @@ export const ManageView: React.FC<ManageViewProps> = ({
   onUpdateMaterial,
   setScreen,
   triggerPreview,
+  onUploadToSubject,
 }) => {
   const [search, setSearch] = useState("");
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
 
   // Edit states
   const [editingMat, setEditingMat] = useState<Material | null>(null);
@@ -42,8 +45,37 @@ export const ManageView: React.FC<ManageViewProps> = ({
   const filtered = materials.filter(
     (m) =>
       m.title.toLowerCase().includes(search.toLowerCase()) ||
-      m.fileName.toLowerCase().includes(search.toLowerCase())
+      m.fileName.toLowerCase().includes(search.toLowerCase()) ||
+      (m.subject || "General").toLowerCase().includes(search.toLowerCase())
   );
+
+  // Dynamic Grouping of Filtered Materials by Subject
+  const groups: { [subject: string]: Material[] } = {};
+  filtered.forEach((mat) => {
+    const subName = mat.subject?.trim() || "General";
+    if (!groups[subName]) {
+      groups[subName] = [];
+    }
+    groups[subName].push(mat);
+  });
+
+  const subjectsList = Object.keys(groups).sort((a, b) => {
+    if (a === "General") return 1;
+    if (b === "General") return -1;
+    return a.localeCompare(b);
+  });
+
+  // Safeguard: Reset selectedSubject if it's no longer present after filtering
+  if (selectedSubject && (!groups[selectedSubject] || groups[selectedSubject].length === 0)) {
+    setSelectedSubject(null);
+  }
+
+  const currentSubjectMaterials = selectedSubject ? groups[selectedSubject] || [] : [];
+  const displayMaterials = selectedSubject ? currentSubjectMaterials : filtered;
+
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [selectedSubject]);
 
   const startEdit = (mat: Material) => {
     setEditingMat(mat);
@@ -122,7 +154,7 @@ export const ManageView: React.FC<ManageViewProps> = ({
         </button>
       </div>
 
-      {selectedIds.length > 0 && (
+      {selectedSubject && selectedIds.length > 0 && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl bg-violet-950/20 border border-violet-500/20 gap-3 text-xs font-mono font-bold animate-in slide-in-from-top-3 duration-200">
           <div className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full bg-cyber-violet animate-pulse" />
@@ -151,121 +183,202 @@ export const ManageView: React.FC<ManageViewProps> = ({
       )}
 
       {filtered.length > 0 ? (
-        <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/40">
-          <table className="w-full text-left text-sm border-collapse">
-            <thead>
-              <tr className="border-b border-slate-800 text-[10px] font-mono tracking-wider text-slate-400 uppercase bg-slate-950/70">
-                <th className="px-5 py-4 w-12 text-center">
-                  <input
-                    type="checkbox"
-                    className="rounded border-slate-800 text-cyber-violet focus:ring-cyber-violet bg-slate-950 cursor-pointer h-4 w-4"
-                    checked={filtered.length > 0 && selectedIds.length === filtered.length}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedIds(filtered.map(f => f.id));
-                      } else {
-                        setSelectedIds([]);
-                      }
-                    }}
-                  />
-                </th>
-                <th className="px-5 py-4">Course Document Info</th>
-                <th className="px-5 py-4">Department & Term</th>
-                <th className="px-5 py-4">Download Count</th>
-                <th className="px-5 py-4">File Name / Size</th>
-                <th className="px-5 py-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800 bg-slate-900/10">
-              {filtered.map((mat) => (
-                <tr
-                  key={mat.id}
-                  className={`hover:bg-slate-900/30 transition-colors ${selectedIds.includes(mat.id) ? 'bg-violet-500/5' : ''}`}
+        selectedSubject ? (
+          <div className="space-y-4">
+            {/* Header with back button and upload options */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-slate-800 bg-slate-900/40">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center text-cyber-violet border border-violet-500/20">
+                  <Folder className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-base text-slate-100">
+                    {selectedSubject}
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Managing {currentSubjectMaterials.length} materials
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                {onUploadToSubject && (
+                  <button
+                    onClick={() => onUploadToSubject(selectedSubject)}
+                    className="flex items-center justify-center gap-2 px-4 py-2 text-white bg-cyber-violet hover:bg-cyber-violet/85 text-xs font-bold rounded-lg transition cursor-pointer"
+                  >
+                    <UploadCloud className="w-4 h-4 text-white" />
+                    Upload to {selectedSubject}
+                  </button>
+                )}
+                <button
+                  onClick={() => setSelectedSubject(null)}
+                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-950 text-slate-300 text-xs font-semibold border border-slate-800 hover:bg-slate-850 hover:text-white transition cursor-pointer"
                 >
-                  <td className="px-5 py-4.5 w-12 text-center">
-                    <input
-                      type="checkbox"
-                      className="rounded border-slate-800 text-cyber-violet focus:ring-cyber-violet bg-slate-950 cursor-pointer h-4 w-4"
-                      checked={selectedIds.includes(mat.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedIds((prev) => [...prev, mat.id]);
-                        } else {
-                          setSelectedIds((prev) => prev.filter(id => id !== mat.id));
-                        }
-                      }}
-                    />
-                  </td>
-                  {/* Info */}
-                  <td className="px-5 py-4.5">
-                    <div className="space-y-2 max-w-xs md:max-w-md">
-                      <span className="inline-block px-2 py-0.5 rounded text-[9px] font-mono uppercase bg-violet-500/15 text-cyber-violet border border-violet-500/10">
-                        {mat.category}
-                      </span>
-                      <h4 className="font-medium text-slate-200 block text-xs md:text-sm">
-                        {mat.title}
+                  <ArrowLeft className="w-4 h-4 text-cyber-violet" />
+                  Back to Subjects
+                </button>
+              </div>
+            </div>
+
+            {/* List Table of active subject materials */}
+            <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/40">
+              <table className="w-full text-left text-sm border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-800 text-[10px] font-mono tracking-wider text-slate-400 uppercase bg-slate-950/70">
+                    <th className="px-5 py-4 w-12 text-center">
+                      <input
+                        type="checkbox"
+                        className="rounded border-slate-800 text-cyber-violet focus:ring-cyber-violet bg-slate-950 cursor-pointer h-4 w-4"
+                        checked={displayMaterials.length > 0 && selectedIds.length === displayMaterials.length}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedIds(displayMaterials.map(f => f.id));
+                          } else {
+                            setSelectedIds([]);
+                          }
+                        }}
+                      />
+                    </th>
+                    <th className="px-5 py-4">Course Document Info</th>
+                    <th className="px-5 py-4">Department & Term</th>
+                    <th className="px-5 py-4">Download Count</th>
+                    <th className="px-5 py-4">File Name / Size</th>
+                    <th className="px-5 py-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 bg-slate-900/10">
+                  {displayMaterials.map((mat) => (
+                    <tr
+                      key={mat.id}
+                      className={`hover:bg-slate-900/30 transition-colors ${selectedIds.includes(mat.id) ? "bg-violet-500/5" : ""}`}
+                    >
+                      <td className="px-5 py-4.5 w-12 text-center">
+                        <input
+                          type="checkbox"
+                          className="rounded border-slate-800 text-cyber-violet focus:ring-cyber-violet bg-slate-950 cursor-pointer h-4 w-4"
+                          checked={selectedIds.includes(mat.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedIds((prev) => [...prev, mat.id]);
+                            } else {
+                              setSelectedIds((prev) => prev.filter(id => id !== mat.id));
+                            }
+                          }}
+                        />
+                      </td>
+                      {/* Info */}
+                      <td className="px-5 py-4.5">
+                        <div className="space-y-2 max-w-xs md:max-w-md">
+                          <span className="inline-block px-2 py-0.5 rounded text-[9px] font-mono uppercase bg-violet-500/15 text-cyber-violet border border-violet-500/10">
+                            {mat.category}
+                          </span>
+                          <h4 className="font-medium text-slate-200 block text-xs md:text-sm">
+                            {mat.title}
+                          </h4>
+                          <p className="text-[10px] text-slate-500">
+                            Uploaded by {mat.uploadedByName} on {new Date(mat.uploadDate).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </td>
+
+                      {/* Targets */}
+                      <td className="px-5 py-4.5 font-mono text-[11px] text-slate-300">
+                        <p>DEP: <span className="text-cyber-violet font-bold">{mat.department}</span></p>
+                        <p className="text-slate-500 mt-0.5">Year {mat.year} S{mat.semester}</p>
+                        <p className="text-slate-400 text-[10px] mt-1">Sub: <span className="text-slate-300">{mat.subject || "General"}</span></p>
+                        <p className="text-slate-500 text-[10px]">Unit: <span className="text-slate-400">{mat.unit || "General"}</span></p>
+                      </td>
+
+                      {/* Download stats */}
+                      <td className="px-5 py-4.5 font-sans">
+                        <span className="inline-flex items-center gap-1 font-mono text-xs font-bold text-cyber-violet">
+                          <Download className="w-3.5 h-3.5" />
+                          {mat.downloadsCount} clicks
+                        </span>
+                      </td>
+
+                      {/* File */}
+                      <td className="px-5 py-4.5 font-mono text-xs text-slate-400">
+                        <p className="truncate max-w-[120px]" title={mat.fileName}>
+                          {mat.fileName}
+                        </p>
+                        <p className="text-[10px] text-slate-600 font-sans mt-0.5">{mat.fileSize}</p>
+                      </td>
+
+                      {/* Actions column */}
+                      <td className="px-5 py-4.5 text-right">
+                        <div className="inline-flex gap-1">
+                          <button
+                            onClick={() => triggerPreview(mat)}
+                            className="p-1.5 rounded bg-slate-950 border border-slate-800 text-slate-400 hover:text-white"
+                            title="Simulate Review Preview"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => startEdit(mat)}
+                            className="p-1.5 rounded bg-slate-950 border border-slate-850 text-sky-400 hover:bg-slate-900"
+                            title="Edit Details"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setDeletingId(mat.id)}
+                            className="p-1.5 rounded bg-rose-500/10 border border-transparent hover:border-rose-500/25 text-rose-400 hover:bg-rose-500/20"
+                            title="Hard Delete"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {subjectsList.map((subj) => {
+              const mats = groups[subj];
+              const uniqueUnits = Array.from(new Set(mats.map(m => m.unit?.trim() || "General")))
+                .filter(u => u !== "" && u.toLowerCase() !== "general");
+              const unitsText = uniqueUnits.length > 0 
+                ? `Units: ${uniqueUnits.join(", ")}` 
+                : "General Unit";
+
+              return (
+                <div
+                  key={subj}
+                  onClick={() => setSelectedSubject(subj)}
+                  className="p-5 rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-900/80 hover:border-violet-500/30 transition-all duration-200 cursor-pointer group box-glow-violet/5 flex flex-col justify-between relative"
+                >
+                  <div className="space-y-4">
+                    <div className="w-12 h-12 rounded-lg bg-violet-500/10 flex items-center justify-center text-cyber-violet group-hover:bg-violet-500/20 transition-colors border border-violet-500/10 group-hover:border-violet-500/30">
+                      <Folder className="w-6 h-6 text-cyber-violet" />
+                    </div>
+                    <div>
+                      <h4 className="font-display font-medium text-base text-slate-100 group-hover:text-cyber-violet transition-colors truncate">
+                        {subj}
                       </h4>
-                      <p className="text-[10px] text-slate-500">
-                        Uploaded by {mat.uploadedByName} on {new Date(mat.uploadDate).toLocaleDateString()}
+                      <p className="text-xs text-slate-400 mt-1">
+                        {mats.length} {mats.length === 1 ? "material" : "materials"} total
                       </p>
                     </div>
-                  </td>
-
-                  {/* Targets */}
-                  <td className="px-5 py-4.5 font-mono text-[11px] text-slate-300">
-                    <p>DEP: <span className="text-cyber-violet font-bold">{mat.department}</span></p>
-                    <p className="text-slate-500 mt-0.5">Year {mat.year} S{mat.semester}</p>
-                    <p className="text-slate-400 text-[10px] mt-1">Sub: <span className="text-slate-300">{mat.subject || "General"}</span></p>
-                    <p className="text-slate-500 text-[10px]">Unit: <span className="text-slate-400">{mat.unit || "General"}</span></p>
-                  </td>
-
-                  {/* Download stats */}
-                  <td className="px-5 py-4.5 font-sans">
-                    <span className="inline-flex items-center gap-1 font-mono text-xs font-bold text-cyber-violet">
-                      <Download className="w-3.5 h-3.5" />
-                      {mat.downloadsCount} clicks
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between text-[11px] font-mono text-slate-500">
+                    <span className="truncate max-w-[80%]">
+                      {unitsText}
                     </span>
-                  </td>
-
-                  {/* File */}
-                  <td className="px-5 py-4.5 font-mono text-xs text-slate-400">
-                    <p className="truncate max-w-[120px]" title={mat.fileName}>
-                      {mat.fileName}
-                    </p>
-                    <p className="text-[10px] text-slate-600 font-sans mt-0.5">{mat.fileSize}</p>
-                  </td>
-
-                  {/* Actions column */}
-                  <td className="px-5 py-4.5 text-right">
-                    <div className="inline-flex gap-1">
-                      <button
-                        onClick={() => triggerPreview(mat)}
-                        className="p-1.5 rounded bg-slate-950 border border-slate-800 text-slate-400 hover:text-white"
-                        title="Simulate Review Preview"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => startEdit(mat)}
-                        className="p-1.5 rounded bg-slate-950 border border-slate-850 text-sky-400 hover:bg-slate-900"
-                        title="Edit Details"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => setDeletingId(mat.id)}
-                        className="p-1.5 rounded bg-rose-500/10 border border-transparent hover:border-rose-500/25 text-rose-400 hover:bg-rose-500/20"
-                        title="Hard Delete"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    <span className="text-cyber-violet opacity-0 group-hover:opacity-100 transition-opacity font-bold">
+                      MANAGE &rarr;
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
       ) : (
         <EmptyState type="no-uploads" onAction={() => setScreen("FACULTY_UPLOAD")} />
       )}
