@@ -33,8 +33,6 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
         return "Student Dashboard Overview";
       case "STUDENT_BROWSE":
         return "Academic Catalog Repository";
-      case "STUDENT_DOWNLOADS":
-        return "Downloads History Journal";
       case "STUDENT_REPORTS":
         return "Submitted Tickets Queue";
       case "STUDENT_PROFILE":

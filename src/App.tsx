@@ -23,7 +23,6 @@ import { PDFPreviewModal } from "./components/PDFPreviewModal";
 // Views student layout
 import { DashboardView as StudentDashboard } from "./views/student/DashboardView";
 import { BrowseView as StudentBrowse } from "./views/student/BrowseView";
-import { DownloadsView as StudentDownloads } from "./views/student/DownloadsView";
 import { ReportsView as StudentReports } from "./views/student/ReportsView";
 import { ProfileView as StudentProfileView } from "./views/student/ProfileView";
 
@@ -642,15 +641,6 @@ export default function App() {
               onDownload={handleDownloadMaterial}
               triggerPreview={(m) => setPreviewingMaterial(m)}
               onSubmitReport={handleReportIssue}
-            />
-          );
-        case "STUDENT_DOWNLOADS":
-          return (
-            <StudentDownloads
-              downloadedMaterials={downloadHistory}
-              triggerPreview={(m) => setPreviewingMaterial(m)}
-              onClearDownloads={() => setDownloadHistory([])}
-              setScreen={(s) => setActiveScreen(s)}
             />
           );
         case "STUDENT_REPORTS":

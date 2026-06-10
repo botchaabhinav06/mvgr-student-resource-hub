@@ -29,11 +29,6 @@ export const StudentSidebar: React.FC<StudentSidebarProps> = ({
       screen: "STUDENT_BROWSE" as ActiveScreen,
     },
     {
-      label: "Downloads",
-      icon: DownloadCloud,
-      screen: "STUDENT_DOWNLOADS" as ActiveScreen,
-    },
-    {
       label: "Reports",
       icon: FileText,
       screen: "STUDENT_REPORTS" as ActiveScreen,
