@@ -45,6 +45,8 @@ export interface Material {
   storageProvider?: "supabase" | "firebase" | string;
   createdAt?: string;
   updatedAt?: string;
+  subject?: string;
+  unit?: string;
 }
 
 export interface IssueReport {

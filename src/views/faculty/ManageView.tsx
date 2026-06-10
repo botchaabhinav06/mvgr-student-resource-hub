@@ -28,6 +28,8 @@ export const ManageView: React.FC<ManageViewProps> = ({
   const [editDept, setEditDept] = useState("");
   const [editYear, setEditYear] = useState(1);
   const [editSem, setEditSem] = useState(1);
+  const [editSubject, setEditSubject] = useState("");
+  const [editUnit, setEditUnit] = useState("");
 
   // Delete states
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -50,6 +52,8 @@ export const ManageView: React.FC<ManageViewProps> = ({
     setEditDept(mat.department);
     setEditYear(Number(mat.year));
     setEditSem(Number(mat.semester));
+    setEditSubject(mat.subject || "General");
+    setEditUnit(mat.unit || "General");
   };
 
   const saveEdit = (e: React.FormEvent) => {
@@ -63,6 +67,8 @@ export const ManageView: React.FC<ManageViewProps> = ({
       department: editDept,
       year: editYear,
       semester: editSem,
+      subject: editSubject.trim() === "" ? "General" : editSubject.trim(),
+      unit: editUnit.trim() === "" ? "General" : editUnit.trim(),
     });
 
     setEditingMat(null);
@@ -209,6 +215,8 @@ export const ManageView: React.FC<ManageViewProps> = ({
                   <td className="px-5 py-4.5 font-mono text-[11px] text-slate-300">
                     <p>DEP: <span className="text-cyber-violet font-bold">{mat.department}</span></p>
                     <p className="text-slate-500 mt-0.5">Year {mat.year} S{mat.semester}</p>
+                    <p className="text-slate-400 text-[10px] mt-1">Sub: <span className="text-slate-300">{mat.subject || "General"}</span></p>
+                    <p className="text-slate-500 text-[10px]">Unit: <span className="text-slate-400">{mat.unit || "General"}</span></p>
                   </td>
 
                   {/* Download stats */}
@@ -357,6 +365,34 @@ export const ManageView: React.FC<ManageViewProps> = ({
                     <option value={1}>Semester I</option>
                     <option value={2}>Semester II</option>
                   </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[11px] font-mono text-slate-500 uppercase block mb-1">
+                    Subject Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editSubject}
+                    onChange={(e) => setEditSubject(e.target.value)}
+                    className="w-full px-3 py-2 rounded bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-violet-500"
+                    placeholder="e.g. Java Programming"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-mono text-slate-500 uppercase block mb-1">
+                    Unit / Lesson
+                  </label>
+                  <input
+                    type="text"
+                    value={editUnit}
+                    onChange={(e) => setEditUnit(e.target.value)}
+                    className="w-full px-3 py-2 rounded bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-violet-500"
+                    placeholder="e.g. Unit 1"
+                  />
                 </div>
               </div>
 

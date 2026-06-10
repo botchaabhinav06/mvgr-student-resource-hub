@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Search, SlidersHorizontal, DownloadCloud, Eye, AlertTriangle, X, Check, FileSearch, Loader2 } from "lucide-react";
+import { Search, SlidersHorizontal, DownloadCloud, Eye, AlertTriangle, X, Check, FileSearch, Loader2, Folder, ArrowLeft } from "lucide-react";
 import { Material, IssueReport, StudentProfile } from "../../types";
 import { EmptyState } from "../../components/EmptyState";
 import { DEPARTMENTS, MATERIAL_CATEGORIES } from "../../mockData";
@@ -25,6 +25,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
   const [selectedYear, setSelectedYear] = useState("All");
   const [selectedSem, setSelectedSem] = useState("All");
   const [selectedCat, setSelectedCat] = useState("All");
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
 
   // Report issue flow state
   const [reportingMaterial, setReportingMaterial] = useState<Material | null>(null);
@@ -51,6 +52,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
     setSelectedYear("All");
     setSelectedSem("All");
     setSelectedCat("All");
+    setSelectedSubject(null);
   };
 
   // Filter logic
@@ -63,6 +65,25 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
 
     return matchesSearch && matchesDept && matchesYear && matchesSem && matchesCat;
   });
+
+  // Dynamic Grouping of Filtered Materials by Subject
+  const groups: { [subject: string]: Material[] } = {};
+  filteredMaterials.forEach((mat) => {
+    const subName = mat.subject?.trim() || "General";
+    if (!groups[subName]) {
+      groups[subName] = [];
+    }
+    groups[subName].push(mat);
+  });
+
+  const subjectsList = Object.keys(groups).sort((a, b) => {
+    if (a === "General") return 1;
+    if (b === "General") return -1;
+    return a.localeCompare(b);
+  });
+
+  const currentSubjectMaterials = selectedSubject ? groups[selectedSubject] || [] : [];
+  const isViewingSubject = selectedSubject !== null && currentSubjectMaterials.length > 0;
 
   const handleReportSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,7 +137,10 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
               type="text"
               placeholder="Search by keywords or file tag..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setSelectedSubject(null);
+              }}
               className="w-full pl-10 pr-4 py-3 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-cyan-500 transition font-sans"
             />
           </div>
@@ -128,7 +152,10 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
             </label>
             <select
               value={selectedDept}
-              onChange={(e) => setSelectedDept(e.target.value)}
+              onChange={(e) => {
+                setSelectedDept(e.target.value);
+                setSelectedSubject(null);
+              }}
               className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-300 focus:outline-none focus:border-cyan-500 cursor-pointer"
             >
               {departments.map((d) => (
@@ -146,7 +173,10 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
             </label>
             <select
               value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
+              onChange={(e) => {
+                setSelectedYear(e.target.value);
+                setSelectedSubject(null);
+              }}
               className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-300 focus:outline-none focus:border-cyan-500 cursor-pointer"
             >
               {years.map((y) => (
@@ -165,7 +195,10 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
               </label>
               <select
                 value={selectedSem}
-                onChange={(e) => setSelectedSem(e.target.value)}
+                onChange={(e) => {
+                  setSelectedSem(e.target.value);
+                  setSelectedSubject(null);
+                }}
                 className="w-full px-2 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-cyan-500 cursor-pointer"
               >
                 {semesters.map((s) => (
@@ -181,7 +214,10 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
               </label>
               <select
                 value={selectedCat}
-                onChange={(e) => setSelectedCat(e.target.value)}
+                onChange={(e) => {
+                  setSelectedCat(e.target.value);
+                  setSelectedSubject(null);
+                }}
                 className="w-full px-2 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-cyan-500 cursor-pointer"
               >
                 {categories.map((c) => (
@@ -197,87 +233,166 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
 
       {/* Grid listing */}
       {filteredMaterials.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredMaterials.map((mat) => (
-            <div
-              key={mat.id}
-              className="p-5 rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-900/80 hover:border-cyan-500/30 transition-all duration-200 flex flex-col justify-between group box-glow-cyan/5"
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="px-2.5 py-0.5 rounded text-[10px] font-mono uppercase font-bold bg-cyan-500/10 text-cyber-cyan border border-cyan-500/20">
-                    {mat.category}
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-500 block">
-                    {mat.fileSize}
-                  </span>
+        isViewingSubject ? (
+          <div className="space-y-4">
+            {/* Header with back button */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-slate-800 bg-slate-900/40">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyber-cyan border border-cyan-500/20">
+                  <Folder className="w-5 h-5 animate-pulse" />
                 </div>
-
-                <div className="space-y-1">
-                  <h4 className="font-display font-medium text-slate-100 group-hover:text-cyber-cyan transition-colors leading-snug">
-                    {mat.title}
-                  </h4>
-                  <p className="text-xs text-slate-400 font-sans">
-                    By {mat.uploadedByName} ({mat.department} Dept)
+                <div>
+                  <h3 className="font-display font-bold text-base text-slate-100">
+                    {selectedSubject}
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Showing {currentSubjectMaterials.length} materials
                   </p>
                 </div>
+              </div>
+              <button
+                onClick={() => setSelectedSubject(null)}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-slate-950 text-slate-300 text-xs font-semibold border border-slate-800 hover:bg-slate-850 hover:text-white transition cursor-pointer self-start sm:self-auto"
+              >
+                <ArrowLeft className="w-4 h-4 text-cyber-cyan" />
+                Back to Subjects
+              </button>
+            </div>
 
-                {/* Meta details tag */}
-                <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800/80 grid grid-cols-2 gap-y-1 text-[11px] font-mono text-slate-500">
-                  <div>
-                    YEAR: <span className="text-slate-300 font-bold">{mat.year}</span>
+            {/* Cards for selected subject */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {currentSubjectMaterials.map((mat) => (
+                <div
+                  key={mat.id}
+                  className="p-5 rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-900/80 hover:border-cyan-500/30 transition-all duration-200 flex flex-col justify-between group box-glow-cyan/5"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="px-2.5 py-0.5 rounded text-[10px] font-mono uppercase font-bold bg-cyan-500/10 text-cyber-cyan border border-cyan-500/20">
+                        {mat.category}
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-500 block">
+                        {mat.fileSize}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <h4 className="font-display font-medium text-slate-100 group-hover:text-cyber-cyan transition-colors leading-snug">
+                        {mat.title}
+                      </h4>
+                      <p className="text-xs text-slate-400 font-sans">
+                        By {mat.uploadedByName} ({mat.department} Dept)
+                      </p>
+                    </div>
+
+                    {/* Meta details tag */}
+                    <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800/80 grid grid-cols-2 gap-y-1 text-[11px] font-mono text-slate-500">
+                      <div>
+                        YEAR: <span className="text-slate-300 font-bold">{mat.year}</span>
+                      </div>
+                      <div>
+                        SEM: <span className="text-slate-300 font-bold">semester {mat.semester}</span>
+                      </div>
+                      <div>
+                        DATE: <span className="text-slate-400">{new Date(mat.uploadDate).toLocaleDateString()}</span>
+                      </div>
+                      <div>
+                        CAT: <span className="text-cyber-cyan font-bold truncate">{mat.category}</span>
+                      </div>
+                      <div className="col-span-2 border-t border-slate-900 pt-1 mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-slate-400">
+                        <div>
+                          SUBJECT: <span className="text-slate-300 font-semibold">{mat.subject || "General"}</span>
+                        </div>
+                        <div>
+                          UNIT: <span className="text-slate-300 font-semibold">{mat.unit || "General"}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    SEM: <span className="text-slate-300 font-bold">semester {mat.semester}</span>
-                  </div>
-                  <div>
-                    DATE: <span className="text-slate-400">{new Date(mat.uploadDate).toLocaleDateString()}</span>
-                  </div>
-                  <div>
-                    CAT: <span className="text-cyber-cyan font-bold truncate">{mat.category}</span>
+
+                  {/* Action grid bottom */}
+                  <div className="grid grid-cols-3 gap-2 mt-5">
+                    <button
+                      onClick={() => triggerPreview(mat)}
+                      className="flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg bg-slate-950 text-slate-300 text-xs font-semibold border border-slate-800 hover:bg-slate-850 hover:text-white transition cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      Preview
+                    </button>
+
+                    <button
+                      onClick={() => handleDownloadClick(mat)}
+                      disabled={downloadingId === mat.id}
+                      className="flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg bg-cyan-500 disabled:opacity-55 disabled:bg-cyan-500/50 text-slate-950 text-xs font-bold hover:bg-cyan-400 transition cursor-pointer disabled:cursor-not-allowed"
+                    >
+                      {downloadingId === mat.id ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          Wait...
+                        </>
+                      ) : (
+                        <>
+                          <DownloadCloud className="w-3.5 h-3.5" />
+                          Download
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => setReportingMaterial(mat)}
+                      className="flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg bg-rose-500/10 border border-rose-500/25 text-rose-400 hover:bg-rose-500/20 text-xs font-medium hover:text-rose-200 transition cursor-pointer"
+                    >
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      Report Issue
+                    </button>
                   </div>
                 </div>
-              </div>
-
-              {/* Action grid bottom */}
-              <div className="grid grid-cols-3 gap-2 mt-5">
-                <button
-                  onClick={() => triggerPreview(mat)}
-                  className="flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg bg-slate-950 text-slate-300 text-xs font-semibold border border-slate-800 hover:bg-slate-850 hover:text-white transition cursor-pointer"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  Preview
-                </button>
-
-                <button
-                  onClick={() => handleDownloadClick(mat)}
-                  disabled={downloadingId === mat.id}
-                  className="flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg bg-cyan-500 disabled:opacity-55 disabled:bg-cyan-500/50 text-slate-950 text-xs font-bold hover:bg-cyan-400 transition cursor-pointer disabled:cursor-not-allowed"
-                >
-                  {downloadingId === mat.id ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Wait...
-                    </>
-                  ) : (
-                    <>
-                      <DownloadCloud className="w-3.5 h-3.5" />
-                      Download
-                    </>
-                  )}
-                </button>
-
-                <button
-                  onClick={() => setReportingMaterial(mat)}
-                  className="flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg bg-rose-500/10 border border-rose-500/25 text-rose-400 hover:bg-rose-500/20 text-xs font-medium hover:text-rose-200 transition cursor-pointer"
-                >
-                  <AlertTriangle className="w-3.5 h-3.5" />
-                  Report Issue
-                </button>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        ) : (
+          /* Render grid of subject folder cards */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {subjectsList.map((subj) => {
+              const mats = groups[subj];
+              const uniqueUnits = Array.from(new Set(mats.map(m => m.unit?.trim() || "General")))
+                .filter(u => u !== "" && u.toLowerCase() !== "general");
+              const unitsText = uniqueUnits.length > 0 
+                ? `Units: ${uniqueUnits.join(", ")}` 
+                : "General Unit";
+
+              return (
+                <div
+                  key={subj}
+                  onClick={() => setSelectedSubject(subj)}
+                  className="p-5 rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-900/80 hover:border-cyan-500/30 transition-all duration-200 cursor-pointer group box-glow-cyan/5 flex flex-col justify-between relative"
+                >
+                  <div className="space-y-4">
+                    <div className="w-12 h-12 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyber-cyan group-hover:bg-cyan-500/20 transition-colors border border-cyan-500/10 group-hover:border-cyan-500/30">
+                      <Folder className="w-6 h-6 text-cyber-cyan" />
+                    </div>
+                    <div>
+                      <h4 className="font-display font-medium text-base text-slate-100 group-hover:text-cyber-cyan transition-colors truncate">
+                        {subj}
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-1">
+                        {mats.length} {mats.length === 1 ? "material" : "materials"} total
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between text-[11px] font-mono text-slate-500">
+                    <span className="truncate max-w-[80%]">
+                      {unitsText}
+                    </span>
+                    <span className="text-cyber-cyan opacity-0 group-hover:opacity-100 transition-opacity font-bold">
+                      OPEN &rarr;
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
       ) : (
         <EmptyState type="no-materials" onAction={resetFilters} />
       )}

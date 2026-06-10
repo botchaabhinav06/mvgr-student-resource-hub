@@ -21,6 +21,8 @@ export const UploadView: React.FC<UploadViewProps> = ({
   const [department, setDepartment] = useState(user.department); // default to user dept
   const [year, setYear] = useState(3);
   const [semester, setSemester] = useState(2);
+  const [subject, setSubject] = useState("");
+  const [unit, setUnit] = useState("");
   
   // Real PDF State coordinates
   const [rawFile, setRawFile] = useState<File | null>(null);
@@ -141,6 +143,8 @@ export const UploadView: React.FC<UploadViewProps> = ({
         previewUrl: publicUrl,
         storagePath: storagePath,
         storageProvider: "supabase",
+        subject: subject.trim() === "" ? "General" : subject.trim(),
+        unit: unit.trim() === "" ? "General" : unit.trim(),
       });
 
       setSuccessToast("RESOURCE SECURED // MATERIAL COMMITTED TO CLOUD ENVELOPE");
@@ -335,6 +339,36 @@ export const UploadView: React.FC<UploadViewProps> = ({
                 <option value={2}>Semester II</option>
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wide block mb-1.5" id="subject-name-label">
+              Subject Name
+            </label>
+            <input
+              type="text"
+              disabled={uploading}
+              placeholder="Enter subject name, e.g., Java Programming"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
+              id="subject-name-input"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wide block mb-1.5" id="unit-lesson-label">
+              Unit / Lesson
+            </label>
+            <input
+              type="text"
+              disabled={uploading}
+              placeholder="Enter unit or lesson, e.g., Unit 1 or Lesson 2"
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
+              id="unit-lesson-input"
+            />
           </div>
         </div>
 

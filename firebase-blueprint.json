@@ -72,7 +72,9 @@
         "previewUrl": { "type": "string" },
         "status": { "type": "string" },
         "createdAt": { "type": "string" },
-        "updatedAt": { "type": "string" }
+        "updatedAt": { "type": "string" },
+        "subject": { "type": "string" },
+        "unit": { "type": "string" }
       },
       "required": [
         "id",

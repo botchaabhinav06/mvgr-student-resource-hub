@@ -178,6 +178,8 @@ export default function App() {
           previewUrl: data.previewUrl || "",
           fileSize: data.fileSize || "1.5 MB",
           status: (data.status || "active") as "active" | "inactive",
+          subject: data.subject || "General",
+          unit: data.unit || "General",
         });
       });
       list.sort((a, b) => new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime());
@@ -507,6 +509,8 @@ export default function App() {
       storageProvider: newMatData.storageProvider || "supabase",
       createdAt: now,
       updatedAt: now,
+      subject: newMatData.subject || "General",
+      unit: newMatData.unit || "General",
     };
 
     try {
@@ -531,6 +535,8 @@ export default function App() {
         year: String(updatedMat.year),
         semester: String(updatedMat.semester),
         status: updatedMat.status || "active",
+        subject: updatedMat.subject || "General",
+        unit: updatedMat.unit || "General",
         updatedAt: new Date().toISOString(),
       });
     } catch (err) {
