@@ -31,6 +31,7 @@ import { QuestionPapersView as StudentQuestionPapers } from "./views/student/Que
 import { DashboardView as FacultyDashboard } from "./views/faculty/DashboardView";
 import { UploadView as FacultyUpload } from "./views/faculty/UploadView";
 import { ManageView as FacultyManage } from "./views/faculty/ManageView";
+import { QuestionPapersView as FacultyQuestionPapers } from "./views/faculty/QuestionPapersView";
 import { ReportsView as FacultyReports } from "./views/faculty/ReportsView";
 import { ProfileView as FacultyProfileView } from "./views/faculty/ProfileView";
 
@@ -86,6 +87,7 @@ export default function App() {
   // Routing State
   const [activeScreen, setActiveScreen] = useState<ActiveScreen>("STUDENT_DASHBOARD");
   const [facultyUploadPrefilledSubject, setFacultyUploadPrefilledSubject] = useState<string | null>(null);
+  const [facultyUploadPrefilledType, setFacultyUploadPrefilledType] = useState<"study_material" | "question_paper" | undefined>(undefined);
 
   // UX modal triggers
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -697,10 +699,12 @@ export default function App() {
               setScreen={(screen) => {
                 if (screen !== "FACULTY_UPLOAD") {
                   setFacultyUploadPrefilledSubject(null);
+                  setFacultyUploadPrefilledType(undefined);
                 }
                 setActiveScreen(screen);
               }}
               prefilledSubject={facultyUploadPrefilledSubject || undefined}
+              prefilledUploadType={facultyUploadPrefilledType}
             />
           );
         case "FACULTY_MANAGE":
@@ -712,12 +716,35 @@ export default function App() {
               setScreen={(screen) => {
                 if (screen !== "FACULTY_UPLOAD") {
                   setFacultyUploadPrefilledSubject(null);
+                  setFacultyUploadPrefilledType(undefined);
                 }
                 setActiveScreen(screen);
               }}
               triggerPreview={(m) => setPreviewingMaterial(m)}
               onUploadToSubject={(subj) => {
                 setFacultyUploadPrefilledSubject(subj);
+                setFacultyUploadPrefilledType("study_material");
+                setActiveScreen("FACULTY_UPLOAD");
+              }}
+            />
+          );
+        case "FACULTY_QUESTION_PAPERS":
+          return (
+            <FacultyQuestionPapers
+              materials={materials}
+              onDeleteMaterial={handleFacultyDeleteMaterial}
+              onUpdateMaterial={handleFacultyUpdateMaterial}
+              setScreen={(screen) => {
+                if (screen !== "FACULTY_UPLOAD") {
+                  setFacultyUploadPrefilledSubject(null);
+                  setFacultyUploadPrefilledType(undefined);
+                }
+                setActiveScreen(screen);
+              }}
+              triggerPreview={(m) => setPreviewingMaterial(m)}
+              onUploadToSubject={(subj, type) => {
+                setFacultyUploadPrefilledSubject(subj);
+                setFacultyUploadPrefilledType(type || "question_paper");
                 setActiveScreen("FACULTY_UPLOAD");
               }}
             />

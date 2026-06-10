@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutDashboard, UploadCloud, FolderHeart, ShieldAlert, BarChart3, UserCheck, LogOut, X, Box } from "lucide-react";
+import { LayoutDashboard, UploadCloud, FolderHeart, ShieldAlert, BarChart3, UserCheck, LogOut, X, Box, BookOpen } from "lucide-react";
 import { ActiveScreen } from "../types";
 
 interface FacultySidebarProps {
@@ -32,6 +32,11 @@ export const FacultySidebar: React.FC<FacultySidebarProps> = ({
       label: "Manage Materials",
       icon: FolderHeart,
       screen: "FACULTY_MANAGE" as ActiveScreen,
+    },
+    {
+      label: "Question Papers",
+      icon: BookOpen,
+      screen: "FACULTY_QUESTION_PAPERS" as ActiveScreen,
     },
     {
       label: "Reports Queue",

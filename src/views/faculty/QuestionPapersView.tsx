@@ -2,30 +2,25 @@ import React, { useState, useEffect } from "react";
 import { Search, Edit2, Trash2, Calendar, FileText, Download, X, Save, AlertTriangle, Eye, CheckCircle2, Folder, ArrowLeft, UploadCloud } from "lucide-react";
 import { Material, ActiveScreen } from "../../types";
 import { EmptyState } from "../../components/EmptyState";
-import { DEPARTMENTS, MATERIAL_CATEGORIES } from "../../mockData";
+import { DEPARTMENTS } from "../../mockData";
 
-interface ManageViewProps {
+interface QuestionPapersViewProps {
   materials: Material[];
   onDeleteMaterial: (id: string | string[]) => void;
   onUpdateMaterial: (updated: Material) => void;
   setScreen: (screen: ActiveScreen) => void;
   triggerPreview: (material: Material) => void;
-  onUploadToSubject?: (subject: string) => void;
+  onUploadToSubject?: (subject: string, type?: "study_material" | "question_paper") => void;
 }
 
-const ALL_EDIT_CATEGORIES = [
-  "Lesson PDF",
-  "Lesson PPT / Slides PDF",
-  "Subject Syllabus Copy",
-  "Lab Manual",
-  "Notes / Handwritten Notes",
+const QUESTION_PAPER_CATEGORIES = [
   "Mid Question Paper",
   "Semester Regular Question Paper",
   "Semester Supply Question Paper",
   "Model Question Paper"
 ];
 
-export const ManageView: React.FC<ManageViewProps> = ({
+export const QuestionPapersView: React.FC<QuestionPapersViewProps> = ({
   materials,
   onDeleteMaterial,
   onUpdateMaterial,
@@ -44,7 +39,6 @@ export const ManageView: React.FC<ManageViewProps> = ({
   const [editYear, setEditYear] = useState(1);
   const [editSem, setEditSem] = useState(1);
   const [editSubject, setEditSubject] = useState("");
-  const [editUnit, setEditUnit] = useState("");
 
   // Delete states
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -54,21 +48,17 @@ export const ManageView: React.FC<ManageViewProps> = ({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
 
+  // Filter materials to ONLY question paper categories
   const filtered = materials.filter(
     (m) =>
-      ![
-        "Mid Question Paper",
-        "Semester Regular Question Paper",
-        "Semester Supply Question Paper",
-        "Model Question Paper"
-      ].includes(m.category) && (
+      QUESTION_PAPER_CATEGORIES.includes(m.category) && (
         m.title.toLowerCase().includes(search.toLowerCase()) ||
         m.fileName.toLowerCase().includes(search.toLowerCase()) ||
         (m.subject || "General").toLowerCase().includes(search.toLowerCase())
       )
   );
 
-  // Dynamic Grouping of Filtered Materials by Subject
+  // Dynamic Grouping of Filtered Question Papers by Subject
   const groups: { [subject: string]: Material[] } = {};
   filtered.forEach((mat) => {
     const subName = mat.subject?.trim() || "General";
@@ -104,7 +94,6 @@ export const ManageView: React.FC<ManageViewProps> = ({
     setEditYear(Number(mat.year));
     setEditSem(Number(mat.semester));
     setEditSubject(mat.subject || "General");
-    setEditUnit(mat.unit || "General");
   };
 
   const saveEdit = (e: React.FormEvent) => {
@@ -119,18 +108,18 @@ export const ManageView: React.FC<ManageViewProps> = ({
       year: editYear,
       semester: editSem,
       subject: editSubject.trim() === "" ? "General" : editSubject.trim(),
-      unit: editUnit.trim() === "" ? "General" : editUnit.trim(),
+      unit: "General", // For question papers, unit is default to "General"
     });
 
     setEditingMat(null);
-    setToast("MATERIAL METADATA SYNCED SUCCESSFULLY");
+    setToast("QUESTION PAPER METADATA SYNCED SUCCESSFULLY");
     setTimeout(() => setToast(""), 3000);
   };
 
   const confirmDelete = (id: string) => {
     onDeleteMaterial(id);
     setDeletingId(null);
-    setToast("MATERIAL HARD DELETED FROM INVENTORY CATALOG INDEX");
+    setToast("QUESTION PAPER HARD DELETED FROM REPOSITORY");
     setTimeout(() => setToast(""), 3000);
   };
 
@@ -138,7 +127,7 @@ export const ManageView: React.FC<ManageViewProps> = ({
     onDeleteMaterial(selectedIds);
     setSelectedIds([]);
     setShowBulkDeleteModal(false);
-    setToast("SELECTED MATERIAL PURGES INITIATED");
+    setToast("SELECTED QUESTION PAPERS INITIATED FOR PURGE");
     setTimeout(() => setToast(""), 3100);
   };
 
@@ -158,7 +147,7 @@ export const ManageView: React.FC<ManageViewProps> = ({
           <Search className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
           <input
             type="text"
-            placeholder="Search catalog inventory..."
+            placeholder="Search question papers..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2 rounded-lg bg-slate-900 border border-slate-800 text-sm focus:outline-none focus:border-violet-500 text-slate-200"
@@ -166,10 +155,16 @@ export const ManageView: React.FC<ManageViewProps> = ({
         </div>
 
         <button
-          onClick={() => setScreen("FACULTY_UPLOAD")}
+          onClick={() => {
+            if (onUploadToSubject) {
+              onUploadToSubject("", "question_paper");
+            } else {
+              setScreen("FACULTY_UPLOAD");
+            }
+          }}
           className="px-5 py-2 rounded-lg bg-cyber-violet hover:bg-cyber-violet/85 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
         >
-          Upload New Document
+          Upload Question Paper
         </button>
       </div>
 
@@ -178,14 +173,14 @@ export const ManageView: React.FC<ManageViewProps> = ({
           <div className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full bg-cyber-violet animate-pulse" />
             <span className="text-slate-300">
-              SELECTED MATERIALS SUMMARY: <span className="text-cyber-violet font-extrabold text-sm">{selectedIds.length}</span> DOCUMENT(S)
+              SELECTED PAPERS SUMMARY: <span className="text-cyber-violet font-extrabold text-sm">{selectedIds.length}</span> DOCUMENT(S)
             </span>
           </div>
           <div className="flex items-center gap-2.5">
             <button
-              type="button"
-              onClick={() => setSelectedIds([])}
-              className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-850 hover:border-slate-700 hover:text-white text-slate-400 font-sans font-bold text-[11px] cursor-pointer"
+               type="button"
+               onClick={() => setSelectedIds([])}
+               className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-850 hover:border-slate-700 hover:text-white text-slate-400 font-sans font-bold text-[11px] cursor-pointer"
             >
               Clear
             </button>
@@ -215,18 +210,18 @@ export const ManageView: React.FC<ManageViewProps> = ({
                     {selectedSubject}
                   </h3>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Managing {currentSubjectMaterials.length} materials
+                    Managing {currentSubjectMaterials.length} question papers
                   </p>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 {onUploadToSubject && (
                   <button
-                    onClick={() => onUploadToSubject(selectedSubject)}
+                    onClick={() => onUploadToSubject(selectedSubject, "question_paper")}
                     className="flex items-center justify-center gap-2 px-4 py-2 text-white bg-cyber-violet hover:bg-cyber-violet/85 text-xs font-bold rounded-lg transition cursor-pointer"
                   >
                     <UploadCloud className="w-4 h-4 text-white" />
-                    Upload to {selectedSubject}
+                    Upload Question Paper to {selectedSubject}
                   </button>
                 )}
                 <button
@@ -239,7 +234,7 @@ export const ManageView: React.FC<ManageViewProps> = ({
               </div>
             </div>
 
-            {/* List Table of active subject materials */}
+            {/* List Table of active subject papers */}
             <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/40">
               <table className="w-full text-left text-sm border-collapse">
                 <thead>
@@ -258,7 +253,7 @@ export const ManageView: React.FC<ManageViewProps> = ({
                         }}
                       />
                     </th>
-                    <th className="px-5 py-4">Course Document Info</th>
+                    <th className="px-5 py-4">Paper Info</th>
                     <th className="px-5 py-4">Department & Term</th>
                     <th className="px-5 py-4">Download Count</th>
                     <th className="px-5 py-4">File Name / Size</th>
@@ -305,7 +300,6 @@ export const ManageView: React.FC<ManageViewProps> = ({
                         <p>DEP: <span className="text-cyber-violet font-bold">{mat.department}</span></p>
                         <p className="text-slate-500 mt-0.5">Year {mat.year} S{mat.semester}</p>
                         <p className="text-slate-400 text-[10px] mt-1">Sub: <span className="text-slate-300">{mat.subject || "General"}</span></p>
-                        <p className="text-slate-500 text-[10px]">Unit: <span className="text-slate-400">{mat.unit || "General"}</span></p>
                       </td>
 
                       {/* Download stats */}
@@ -360,11 +354,10 @@ export const ManageView: React.FC<ManageViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {subjectsList.map((subj) => {
               const mats = groups[subj];
-              const uniqueUnits = Array.from(new Set(mats.map(m => m.unit?.trim() || "General")))
-                .filter(u => u !== "" && u.toLowerCase() !== "general");
-              const unitsText = uniqueUnits.length > 0 
-                ? `Units: ${uniqueUnits.join(", ")}` 
-                : "General Unit";
+              const uniqueTypes = Array.from(new Set(mats.map(m => m.category.replace(" Question Paper", ""))));
+              const typesText = uniqueTypes.length > 0 
+                ? `Types: ${uniqueTypes.join(", ")}` 
+                : "General Papers";
 
               return (
                 <div
@@ -381,13 +374,13 @@ export const ManageView: React.FC<ManageViewProps> = ({
                         {subj}
                       </h4>
                       <p className="text-xs text-slate-400 mt-1">
-                        {mats.length} {mats.length === 1 ? "material" : "materials"} total
+                        {mats.length} {mats.length === 1 ? "question paper" : "question papers"} available
                       </p>
                     </div>
                   </div>
                   <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between text-[11px] font-mono text-slate-500">
                     <span className="truncate max-w-[80%]">
-                      {unitsText}
+                      {typesText}
                     </span>
                     <span className="text-cyber-violet opacity-0 group-hover:opacity-100 transition-opacity font-bold">
                       MANAGE &rarr;
@@ -399,7 +392,13 @@ export const ManageView: React.FC<ManageViewProps> = ({
           </div>
         )
       ) : (
-        <EmptyState type="no-uploads" onAction={() => setScreen("FACULTY_UPLOAD")} />
+        <EmptyState type="no-uploads" onAction={() => {
+          if (onUploadToSubject) {
+            onUploadToSubject("", "question_paper");
+          } else {
+            setScreen("FACULTY_UPLOAD");
+          }
+        }} />
       )}
 
       {/* Edit Materials Modal Overlay */}
@@ -409,7 +408,7 @@ export const ManageView: React.FC<ManageViewProps> = ({
             <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-800">
               <h3 className="font-display font-bold text-lg text-slate-100 flex items-center gap-1.5">
                 <Edit2 className="w-4 h-4 text-cyber-violet" />
-                Edit Material Specifications
+                Edit Question Paper Specifications
               </h3>
               <button
                 onClick={() => setEditingMat(null)}
@@ -419,7 +418,7 @@ export const ManageView: React.FC<ManageViewProps> = ({
               </button>
             </div>
 
-            <form onSubmit={saveEdit} className="space-y-4">
+            <form onSubmit={saveEdit} className="space-y-4 font-sans">
               <div>
                 <label className="text-[11px] font-mono text-slate-500 uppercase tracking-wide block mb-1">
                   Revision Title
@@ -436,17 +435,14 @@ export const ManageView: React.FC<ManageViewProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[11px] font-mono text-slate-500 uppercase block mb-1">
-                    Category Tag
+                    Paper Type
                   </label>
                   <select
                     value={editCategory}
                     onChange={(e) => setEditCategory(e.target.value)}
                     className="w-full px-2 py-2 rounded bg-slate-950 border border-slate-800 text-xs text-slate-300 focus:outline-none cursor-pointer font-sans"
                   >
-                    {!ALL_EDIT_CATEGORIES.includes(editCategory) && editCategory && (
-                      <option value={editCategory}>{editCategory} (Legacy/Other)</option>
-                    )}
-                    {ALL_EDIT_CATEGORIES.map((cat) => (
+                    {QUESTION_PAPER_CATEGORIES.map((cat) => (
                       <option key={cat} value={cat}>
                         {cat}
                       </option>
@@ -475,7 +471,7 @@ export const ManageView: React.FC<ManageViewProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[11px] font-mono text-slate-500 uppercase block mb-1">
-                    Undergrad Year
+                    Year Link
                   </label>
                   <select
                     value={editYear}
@@ -503,32 +499,17 @@ export const ManageView: React.FC<ManageViewProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[11px] font-mono text-slate-500 uppercase block mb-1">
-                    Subject Name
-                  </label>
-                  <input
-                    type="text"
-                    value={editSubject}
-                    onChange={(e) => setEditSubject(e.target.value)}
-                    className="w-full px-3 py-2 rounded bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-violet-500"
-                    placeholder="e.g. Java Programming"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-mono text-slate-500 uppercase block mb-1">
-                    Unit / Lesson
-                  </label>
-                  <input
-                    type="text"
-                    value={editUnit}
-                    onChange={(e) => setEditUnit(e.target.value)}
-                    className="w-full px-3 py-2 rounded bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-violet-500"
-                    placeholder="e.g. Unit 1"
-                  />
-                </div>
+              <div>
+                <label className="text-[11px] font-mono text-slate-500 uppercase block mb-1">
+                  Subject Name
+                </label>
+                <input
+                  type="text"
+                  value={editSubject}
+                  onChange={(e) => setEditSubject(e.target.value)}
+                  className="w-full px-3 py-2 rounded bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-violet-500"
+                  placeholder="e.g. Java Programming"
+                />
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
@@ -553,63 +534,73 @@ export const ManageView: React.FC<ManageViewProps> = ({
 
       {/* Delete Confirmation Modal Overlay */}
       {deletingId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 font-sans">
-          <div className="w-full max-w-sm rounded-2xl bg-slate-900 border border-slate-800 p-6 shadow-2xl text-center">
-            <div className="w-12 h-12 rounded-full bg-rose-500/10 text-rose-400 flex items-center justify-center mx-auto mb-4 border border-rose-500/15">
-              <AlertTriangle className="w-6 h-6 animate-pulse" />
-            </div>
-            <h3 className="font-display font-bold text-lg text-slate-100 mb-1">
-              Confirm Material Purge
-            </h3>
-            <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-              Are you absolutely certain you want to soft/hard delete this academic file? This operation immediately clears search listings and is irreversible!
-            </p>
-
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setDeletingId(null)}
-                className="px-4 py-2 rounded bg-slate-950 border border-slate-800 hover:bg-slate-850 text-xs text-slate-400 font-semibold"
-              >
-                No, Keep File
-              </button>
-              <button
-                onClick={() => confirmDelete(deletingId)}
-                className="px-4 py-2 rounded bg-rose-500 text-white text-xs font-bold hover:bg-rose-600 transition"
-              >
-                Yes, Purge Document
-              </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-slate-900 border border-slate-800 p-6 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="text-center space-y-4">
+              <div className="w-12 h-12 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto border border-rose-500/20">
+                <AlertTriangle className="w-6 h-6 animate-pulse" />
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="font-display font-black text-slate-100 text-sm tracking-wide uppercase">
+                  CONFIRM HARD DELETION
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed font-sans">
+                  Are you absolutely sure you want to remove this question paper? This action is permanent.
+                </p>
+              </div>
+              <div className="flex justify-center gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setDeletingId(null)}
+                  className="px-4 py-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-850 text-xs font-semibold text-slate-400 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => confirmDelete(deletingId)}
+                  className="px-5 py-2 rounded-lg bg-rose-500 hover:bg-rose-450 text-slate-950 text-xs font-black cursor-pointer shadow-md shadow-rose-500/20"
+                >
+                  Secure Delete
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Bulk Delete Confirmation Modal Overlay */}
+      {/* Bulk Delete Modal Overlay */}
       {showBulkDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-sm rounded-2xl bg-slate-900 border border-slate-800 p-6 shadow-2xl text-center font-sans">
-            <div className="w-12 h-12 rounded-full bg-rose-500/10 text-rose-400 flex items-center justify-center mx-auto mb-4 border border-rose-500/15">
-              <AlertTriangle className="w-6 h-6 animate-pulse" />
-            </div>
-            <h3 className="font-display font-bold text-lg text-slate-100 mb-1">
-              Confirm Bulk Deletion
-            </h3>
-            <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-              Are you sure you want to delete <span className="text-rose-400 font-bold">{selectedIds.length} selected materials</span>? This action is permanent, clears search indicators, and cannot be undone!
-            </p>
-
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setShowBulkDeleteModal(false)}
-                className="px-4 py-2 rounded bg-slate-950 border border-slate-800 hover:bg-slate-850 text-xs text-slate-400 font-semibold cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleExecuteBulkDelete}
-                className="px-4 py-2 rounded bg-rose-500 text-white text-xs font-bold hover:bg-rose-600 transition cursor-pointer font-sans"
-              >
-                Yes, Delete Selected
-              </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-slate-900 border border-slate-800 p-6 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="text-center space-y-4">
+              <div className="w-12 h-12 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto border border-rose-500/20">
+                <AlertTriangle className="w-6 h-6 animate-pulse" />
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="font-display font-black text-slate-100 text-sm tracking-wide uppercase">
+                  CONFIRM BULK ACTION
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed font-sans">
+                  Are you absolutely sure you want to delete <span className="text-rose-400 font-bold">{selectedIds.length}</span> question papers? This operation is permanent.
+                </p>
+              </div>
+              <div className="flex justify-center gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowBulkDeleteModal(false)}
+                  className="px-4 py-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-850 text-xs font-semibold text-slate-400 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExecuteBulkDelete}
+                  className="px-5 py-2 rounded-lg bg-rose-500 hover:bg-rose-450 text-slate-950 text-xs font-black cursor-pointer shadow-md shadow-rose-500/20"
+                >
+                  Bulk Delete
+                </button>
+              </div>
             </div>
           </div>
         </div>

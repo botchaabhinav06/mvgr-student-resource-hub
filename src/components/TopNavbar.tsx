@@ -45,6 +45,8 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
         return "Upload New Lecture Document";
       case "FACULTY_MANAGE":
         return "Academic Materials Inventory";
+      case "FACULTY_QUESTION_PAPERS":
+        return "Question Papers Repository";
       case "FACULTY_REPORTS":
         return "Student Reports Center";
       case "FACULTY_PROFILE":

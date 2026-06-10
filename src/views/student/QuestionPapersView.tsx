@@ -312,7 +312,7 @@ export const QuestionPapersView: React.FC<QuestionPapersViewProps> = ({
                         <div>
                           SUBJECT: <span className="text-slate-300 font-semibold">{mat.subject || "General"}</span>
                         </div>
-                        {mat.unit && (
+                        {mat.unit && mat.unit.toLowerCase() !== "general" && (
                           <div>
                             UNIT/LESSON: <span className="text-slate-300 font-semibold">{mat.unit}</span>
                           </div>

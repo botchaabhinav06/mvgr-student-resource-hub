@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { UploadCloud, File, AlertCircle, Sparkles, CheckCircle, Loader2 } from "lucide-react";
 import { Material, FacultyProfile, ActiveScreen } from "../../types";
-import { DEPARTMENTS, MATERIAL_CATEGORIES } from "../../mockData";
+import { DEPARTMENTS } from "../../mockData";
 import { supabase } from "../../lib/supabaseClient";
 
 interface UploadViewProps {
@@ -9,6 +9,7 @@ interface UploadViewProps {
   onUploadSuccess: (material: Omit<Material, "uploadedBy" | "uploadedByName" | "uploadDate" | "downloadsCount"> & { id: string; storagePath: string; storageProvider: string }) => void;
   setScreen: (screen: ActiveScreen) => void;
   prefilledSubject?: string;
+  prefilledUploadType?: "study_material" | "question_paper";
 }
 
 const STUDY_MATERIAL_CATEGORIES = [
@@ -31,11 +32,16 @@ export const UploadView: React.FC<UploadViewProps> = ({
   onUploadSuccess,
   setScreen,
   prefilledSubject,
+  prefilledUploadType,
 }) => {
   // Form coordinates
   const [title, setTitle] = useState("");
-  const [uploadType, setUploadType] = useState<"study_material" | "question_paper">("study_material");
-  const [category, setCategory] = useState<string>(STUDY_MATERIAL_CATEGORIES[0]);
+  const [uploadType, setUploadType] = useState<"study_material" | "question_paper">(prefilledUploadType || "study_material");
+  const [category, setCategory] = useState<string>(
+    (prefilledUploadType || "study_material") === "study_material"
+      ? STUDY_MATERIAL_CATEGORIES[0]
+      : QUESTION_PAPER_CATEGORIES[0]
+  );
   const [department, setDepartment] = useState(user.department); // default to user dept
   const [year, setYear] = useState(3);
   const [semester, setSemester] = useState(2);
@@ -55,7 +61,15 @@ export const UploadView: React.FC<UploadViewProps> = ({
     if (prefilledSubject) {
       setSubject(prefilledSubject);
     }
-  }, [prefilledSubject]);
+    if (prefilledUploadType) {
+      setUploadType(prefilledUploadType);
+      setCategory(
+        prefilledUploadType === "study_material"
+          ? STUDY_MATERIAL_CATEGORIES[0]
+          : QUESTION_PAPER_CATEGORIES[0]
+      );
+    }
+  }, [prefilledSubject, prefilledUploadType]);
   
   // Real PDF State coordinates
   const [rawFile, setRawFile] = useState<File | null>(null);
@@ -177,7 +191,7 @@ export const UploadView: React.FC<UploadViewProps> = ({
         storagePath: storagePath,
         storageProvider: "supabase",
         subject: subject.trim() === "" ? "General" : subject.trim(),
-        unit: unit.trim() === "" ? "General" : unit.trim(),
+        unit: uploadType === "question_paper" ? "General" : (unit.trim() === "" ? "General" : unit.trim()),
       });
 
       setSuccessToast("RESOURCE SECURED // MATERIAL COMMITTED TO CLOUD ENVELOPE");
@@ -320,13 +334,13 @@ export const UploadView: React.FC<UploadViewProps> = ({
 
           <div>
             <label className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wide block mb-1.5">
-              Material Title Name
+              {uploadType === "study_material" ? "Material Title Name" : "Paper Title"}
             </label>
             <input
               type="text"
               required
               disabled={uploading}
-              placeholder="e.g., Computer Organization Cache Memory Mapping"
+              placeholder={uploadType === "study_material" ? "e.g., Computer Organization Cache Memory Mapping" : "e.g., DBMS Mid 1 Regular Nov 2025"}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
@@ -335,7 +349,7 @@ export const UploadView: React.FC<UploadViewProps> = ({
 
           <div>
             <label className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wide block mb-1.5">
-              Academic Type Category
+              {uploadType === "study_material" ? "Academic Type Category" : "Paper Type"}
             </label>
             <select
               value={category}
@@ -353,7 +367,7 @@ export const UploadView: React.FC<UploadViewProps> = ({
 
           <div>
             <label className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wide block mb-1.5">
-              Target College Department
+              {uploadType === "study_material" ? "Target College Department" : "Department"}
             </label>
             <select
               value={department}
@@ -372,7 +386,7 @@ export const UploadView: React.FC<UploadViewProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wide block mb-1.5">
-                B.Tech Year
+                {uploadType === "study_material" ? "B.Tech Year" : "Year"}
               </label>
               <select
                 value={year}
@@ -390,7 +404,7 @@ export const UploadView: React.FC<UploadViewProps> = ({
 
             <div>
               <label className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wide block mb-1.5">
-                Semester term
+                {uploadType === "study_material" ? "Semester term" : "Semester"}
               </label>
               <select
                 value={semester}
@@ -404,7 +418,7 @@ export const UploadView: React.FC<UploadViewProps> = ({
             </div>
           </div>
 
-          <div>
+          <div className={uploadType === "study_material" ? "" : "md:col-span-2"}>
             <label className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wide block mb-1.5" id="subject-name-label">
               Subject Name
             </label>
@@ -419,20 +433,22 @@ export const UploadView: React.FC<UploadViewProps> = ({
             />
           </div>
 
-          <div>
-            <label className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wide block mb-1.5" id="unit-lesson-label">
-              Unit / Lesson
-            </label>
-            <input
-              type="text"
-              disabled={uploading}
-              placeholder="Enter unit or lesson, e.g., Unit 1 or Lesson 2"
-              value={unit}
-              onChange={(e) => setUnit(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
-              id="unit-lesson-input"
-            />
-          </div>
+          {uploadType === "study_material" && (
+            <div>
+              <label className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wide block mb-1.5" id="unit-lesson-label">
+                Unit / Lesson
+              </label>
+              <input
+                type="text"
+                disabled={uploading}
+                placeholder="Enter unit or lesson, e.g., Unit 1 or Lesson 2"
+                value={unit}
+                onChange={(e) => setUnit(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
+                id="unit-lesson-input"
+              />
+            </div>
+          )}
         </div>
 
         {/* Security / Quality Guidelines Checklist */}
