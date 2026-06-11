@@ -36,7 +36,7 @@ import { ReportsView as FacultyReports } from "./views/faculty/ReportsView";
 import { ProfileView as FacultyProfileView } from "./views/faculty/ProfileView";
 
 const mapFirestoreUser = (uid: string, data: any): StudentProfile | FacultyProfile => {
-  const role = data.role === "student" ? "student" : "faculty";
+  const role = data.role === "student" ? "student" : (data.role === "admin" ? "admin" : "faculty");
   const name = data.name || data.fullName || data.facultyName || "MVGR Member";
   const status = data.status || data.accountStatus || "active";
   
@@ -53,6 +53,7 @@ const mapFirestoreUser = (uid: string, data: any): StudentProfile | FacultyProfi
       accountStatus: status as "active" | "inactive",
     };
   } else {
+    // Both "faculty" and "admin" roles map to FacultyProfile
     return {
       id: uid,
       facultyName: name,
@@ -60,7 +61,7 @@ const mapFirestoreUser = (uid: string, data: any): StudentProfile | FacultyProfi
       email: data.email || "faculty.it@mvgr.edu",
       department: data.department || "IT",
       designation: data.designation || "Professor & HOD",
-      role: "faculty",
+      role: role as "faculty" | "admin",
       accountStatus: status as "active" | "inactive",
     };
   }
@@ -334,19 +335,23 @@ export default function App() {
           return;
         }
 
-        // Align selected loginRole with account role
-        const profileRole = data.role === "student" ? "student" : "faculty";
-        if (loginRole === "student" && profileRole !== "student") {
-          setLoginError("UNAUTHORIZED ROLE: SELECTED STUDENT LOGIN BUT ACCOUNT IS FACULTY.");
-          setLoginLoading(false);
-          await signOut(auth);
-          return;
-        }
-        if (loginRole === "faculty" && profileRole !== "student" && profileRole !== "faculty" && data.role !== "admin") {
-          setLoginError("UNAUTHORIZED ROLE: SELECTED FACULTY LOGIN BUT ACCOUNT IS STUDENT.");
-          setLoginLoading(false);
-          await signOut(auth);
-          return;
+        // Role Validation
+        const actualRole = data.role;
+        
+        if (loginRole === "student") {
+          if (actualRole !== "student") {
+            setLoginError("This account is not registered as a Student. Please use the correct login portal.");
+            setLoginLoading(false);
+            await signOut(auth);
+            return;
+          }
+        } else if (loginRole === "faculty") {
+          if (actualRole !== "faculty" && actualRole !== "admin") {
+            setLoginError("This account is not registered as Faculty/Admin. Please use the correct login portal.");
+            setLoginLoading(false);
+            await signOut(auth);
+            return;
+          }
         }
 
         const mapped = mapFirestoreUser(uid, data);
