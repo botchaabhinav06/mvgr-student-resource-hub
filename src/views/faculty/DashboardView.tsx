@@ -23,12 +23,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Dynamic Cyber Welcome Greeting Page */}
-      <div className="relative p-6 md:p-8 rounded-2xl cyber-glass border border-slate-700/15 dark:border-violet-500/20 dark:bg-gradient-to-r dark:from-violet-950/40 dark:via-slate-900 dark:to-slate-900 dark:box-glow-violet shadow-xl overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 text-theme-teal-action/5 dark:text-violet-500/10 pointer-events-none">
+      <div className="relative p-6 md:p-8 rounded-2xl cyber-glass border border-slate-700/15 dark:border-slate-800 dark:bg-slate-900/40 shadow-xl overflow-hidden">
+        <div className="absolute top-0 right-0 p-8 text-theme-teal-action/5 dark:text-cyber-violet/10 pointer-events-none">
           <Sparkles className="w-48 h-48 animate-pulse" />
         </div>
         <div className="relative z-10 space-y-3 font-sans">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono font-bold bg-theme-teal-action/10 dark:bg-violet-500/10 text-theme-teal-action dark:text-cyber-violet border border-theme-teal-action/15 dark:border-violet-500/20">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono font-bold bg-theme-teal-action/10 dark:bg-cyber-violet/10 text-theme-teal-action dark:text-cyber-violet border border-theme-teal-action/15 dark:border-cyber-violet/20">
             <Building2 className="w-3.5 h-3.5" />
             Faculty Workspace Active
           </div>
@@ -51,7 +51,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Telemetry Metric Codes */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 font-sans">
-        <div className="p-5 rounded-xl cyber-glass border border-slate-700/10 dark:border-slate-800 flex items-center justify-between dark:box-glow-violet shadow-md">
+        <div className="p-5 rounded-xl cyber-glass border border-slate-700/10 dark:border-slate-800 flex items-center justify-between shadow-md">
           <div className="space-y-1">
             <span className="text-xs font-mono uppercase tracking-wider text-slate-400 dark:text-slate-400 block">MY UPLOADED INVENTORY</span>
             <span className="text-3xl font-display font-bold text-slate-100 block">{totalUploaded} / {materials.length}</span>

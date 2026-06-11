@@ -37,7 +37,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     <div className="space-y-6 max-w-4xl">
       {/* Dynamic Toast Alert popup */}
       {toast && (
-        <div className="fixed top-20 right-6 z-50 flex items-center gap-2 p-4 rounded-xl bg-slate-900 border border-cyan-400 text-xs font-mono font-bold text-cyber-cyan box-glow-cyan animate-bounce">
+        <div className="fixed top-20 right-6 z-50 flex items-center gap-2 p-4 rounded-xl bg-slate-900 border border-cyber-cyan/30 text-xs font-mono font-bold text-cyber-cyan shadow-xl animate-bounce">
           <Check className="w-4 h-4" />
           {toast}
         </div>
@@ -45,10 +45,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left Column Profile Identity Badge Card */}
-        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-6 flex flex-col items-center justify-center text-center relative overflow-hidden box-glow-cyan/5">
-          <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-cyan-500 to-violet-500" />
+        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-6 flex flex-col items-center justify-center text-center relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-cyber-cyan/35 to-cyber-violet/35" />
 
-          <div className="w-28 h-28 rounded-full bg-gradient-to-br from-cyan-500/10 to-violet-500/10 border-4 border-slate-800 flex items-center justify-center font-display font-black text-3xl text-cyber-cyan shadow-xl select-none uppercase">
+          <div className="w-28 h-28 rounded-full bg-slate-950 border-2 border-slate-800 flex items-center justify-center font-display font-black text-3xl text-cyber-cyan shadow-md select-none uppercase">
             {getInitials(user.fullName)}
           </div>
 
@@ -56,7 +56,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <h3 className="font-display font-bold text-xl text-slate-100">
               {user.fullName}
             </h3>
-            <span className="text-xs font-mono font-bold text-cyber-cyan bg-cyan-500/10 px-2.5 py-0.5 rounded-full border border-cyan-500/15">
+            <span className="text-xs font-mono font-bold text-cyber-cyan bg-cyber-cyan/10 px-2.5 py-0.5 rounded-full border border-cyber-cyan/15">
               ROLL NO: {user.registerNumber}
             </span>
           </div>

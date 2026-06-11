@@ -28,7 +28,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user, materialsCount }
     <div className="space-y-6 max-w-4xl font-sans">
       {/* Toast Alert popup banner */}
       {toast && (
-        <div className="fixed top-20 right-6 z-50 flex items-center gap-2 p-4 rounded-xl bg-slate-900 border border-violet-400 text-xs font-mono font-bold text-cyber-violet box-glow-violet animate-bounce">
+        <div className="fixed top-20 right-6 z-50 flex items-center gap-2 p-4 rounded-xl bg-slate-900 border border-cyber-violet/30 text-xs font-mono font-bold text-cyber-violet shadow-xl animate-bounce">
           <Check className="w-4 h-4 text-cyber-violet" />
           {toast}
         </div>
@@ -36,18 +36,18 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user, materialsCount }
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left Column Profile Identity Card Badge */}
-        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col items-center justify-center text-center relative overflow-hidden box-glow-violet/5 animate-in fade-in zoom-in-95 duration-200">
-          <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-violet-500 to-rose-500" />
+        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col items-center justify-center text-center relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-cyber-cyan/35 to-cyber-violet/35" />
 
-          <div className="w-28 h-28 rounded-full bg-gradient-to-br from-violet-500/10 to-rose-500/10 border-4 border-slate-800 flex items-center justify-center font-display font-black text-3xl text-cyber-violet shadow-xl select-none uppercase mb-4">
+          <div className="w-28 h-28 rounded-full bg-slate-950 border-2 border-slate-800 flex items-center justify-center font-display font-black text-3xl text-cyber-violet shadow-md select-none uppercase mb-4">
             {getInitials(user.facultyName)}
           </div>
 
           <div className="space-y-1">
-            <h3 className="font-display font-semibold text-lg text-slate-100 animate-pulse">
+            <h3 className="font-display font-semibold text-lg text-slate-100">
               {user.facultyName}
             </h3>
-            <span className="text-[10px] font-mono font-bold text-cyber-violet bg-violet-500/10 px-2.5 py-0.5 rounded-full border border-violet-500/15">
+            <span className="text-[10px] font-mono font-bold text-cyber-violet bg-cyber-violet/10 px-2.5 py-0.5 rounded-full border border-cyber-violet/15">
               STAFF EMPLOYEE: {user.facultyId}
             </span>
           </div>

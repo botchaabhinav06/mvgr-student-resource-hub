@@ -78,7 +78,7 @@ export const StudentSidebar: React.FC<StudentSidebarProps> = ({
                 }}
               />
             </div>
-            <span className="font-display font-black text-sm tracking-tight text-white select-none whitespace-nowrap">
+            <span className="font-display font-black text-sm tracking-tight text-slate-100 dark:text-white select-none whitespace-nowrap">
               MVGR <span className="text-cyber-cyan font-bold">Hub</span>
             </span>
           </div>

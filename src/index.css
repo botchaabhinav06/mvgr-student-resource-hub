@@ -2,51 +2,51 @@
 @import "tailwindcss";
 
 :root {
-  --cyber-cyan: #00E5FF;
-  --cyber-violet: #8B5CF6;
-  --cyber-dark: #07090e;
-  --cyber-card: #0e1320;
-  --cyber-card-hover: #141b2e;
-  --cyber-border: #1e293b;
-  --cyber-border-glow: #334155;
+  --cyber-cyan: #0d9488;        /* Professional Muted Teal */
+  --cyber-violet: #4f46e5;      /* Professional Deep Royal Purple */
+  --cyber-dark: #121316;        /* Beautiful obsidian slate background */
+  --cyber-card: #1a1b1f;        /* Mid-layer Graphite Card */
+  --cyber-card-hover: #22232a;  /* Hover graphite Card */
+  --cyber-border: #2c2e35;      /* Precise low-contrast border */
+  --cyber-border-glow: #383a43; /* Secondary border focus */
 
-  --slate-50: #f8fafc;
-  --slate-100: #f1f5f9;
-  --slate-200: #e2e8f0;
-  --slate-300: #cbd5e1;
-  --slate-400: #94a3b8;
-  --slate-500: #64748b;
-  --slate-650: #1b253b;
-  --slate-600: #475569;
-  --slate-700: #334155;
-  --slate-800: #1e293b;
-  --slate-850: #182235;
-  --slate-900: #0f172a;
-  --slate-950: #020617;
+  --slate-50: #f9fafb;          /* Primary text */
+  --slate-100: #f3f4f6;         /* Primary muted text */
+  --slate-200: #e5e7eb;         /* Secondary text */
+  --slate-300: #d1d5db;         /* Text / layout headers */
+  --slate-400: #9ca3af;         /* Muted gray text */
+  --slate-500: #6b7280;         /* Soft slate labels */
+  --slate-650: #23252a;         /* Subheader or helper lines */
+  --slate-600: #3b3f4a;         /* Neutral slate dividers */
+  --slate-700: #282930;         /* Soft divider background */
+  --slate-800: #1a1b1f;         /* Dark graphite card background */
+  --slate-850: #16171b;         /* Surface background */
+  --slate-900: #141518;         /* Secondary panel background */
+  --slate-950: #121316;         /* Main Graphite AI dark background */
   --raw-white: #ffffff;
 
-  --glass-bg: rgba(14, 19, 32, 0.7);
-  --glass-bg-hover: rgba(20, 27, 46, 0.85);
-  --glass-border: rgba(30, 41, 59, 0.5);
-  --glass-border-hover: rgba(0, 229, 255, 0.3);
-  --glass-shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+  --glass-bg: rgba(26, 27, 31, 0.85);
+  --glass-bg-hover: rgba(33, 35, 40, 0.9);
+  --glass-border: rgba(44, 46, 53, 0.85);
+  --glass-border-hover: rgba(13, 148, 136, 0.4);
+  --glass-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
 
   /* Academic Theme Color Custom Tokens */
-  --theme-hero-main: #ffffff;
-  --theme-hero-cyan: #00E5FF;
-  --theme-hero-violet: #8B5CF6;
-  --theme-body-text: #94a3b8;
-  --theme-muted-text: #64748b;
-  --theme-micro-label: #475569;
-  --theme-gold-accent: #facc15;
-  --theme-teal-action: #00e5ff;
-  --theme-input-bg: #020617;
-  --theme-input-border: #1e293b;
-  --theme-input-text: #e2e8f0;
-  --theme-input-placeholder: #475569;
-  --theme-login-btn-bg: #f1f5f9;
+  --theme-hero-main: #f9fafb;
+  --theme-hero-cyan: #0d9488;
+  --theme-hero-violet: #4f46e5;
+  --theme-body-text: #e5e7eb;
+  --theme-muted-text: #9ca3af;
+  --theme-micro-label: #6b7280;
+  --theme-gold-accent: #d97706;
+  --theme-teal-action: #0d9488;
+  --theme-input-bg: #141518;
+  --theme-input-border: #2c2e35;
+  --theme-input-text: #f3f4f6;
+  --theme-input-placeholder: #5f6571;
+  --theme-login-btn-bg: #f3f4f6;
   --theme-login-btn-hover: #ffffff;
-  --theme-login-btn-text: #020617;
+  --theme-login-btn-text: #121316;
 }
 
 html[data-theme='light'] {
@@ -141,6 +141,32 @@ html[data-theme='light'] {
   --color-theme-login-btn-bg: var(--theme-login-btn-bg);
   --color-theme-login-btn-hover: var(--theme-login-btn-hover);
   --color-theme-login-btn-text: var(--theme-login-btn-text);
+
+  /* Override standard Tailwind cyan to map to custom cyber-cyan (Soft Teal / Muted Gold) */
+  --color-cyan-50: var(--cyber-cyan);
+  --color-cyan-100: var(--cyber-cyan);
+  --color-cyan-200: var(--cyber-cyan);
+  --color-cyan-300: var(--cyber-cyan);
+  --color-cyan-400: var(--cyber-cyan);
+  --color-cyan-500: var(--cyber-cyan);
+  --color-cyan-600: var(--cyber-cyan);
+  --color-cyan-700: var(--cyber-cyan);
+  --color-cyan-800: var(--cyber-cyan);
+  --color-cyan-900: var(--cyber-cyan);
+  --color-cyan-950: var(--cyber-cyan);
+
+  /* Override standard Tailwind violet to map to custom cyber-violet (Soft Indigo / Deep Teal) */
+  --color-violet-50: var(--cyber-violet);
+  --color-violet-100: var(--cyber-violet);
+  --color-violet-200: var(--cyber-violet);
+  --color-violet-300: var(--cyber-violet);
+  --color-violet-400: var(--cyber-violet);
+  --color-violet-500: var(--cyber-violet);
+  --color-violet-600: var(--cyber-violet);
+  --color-violet-700: var(--cyber-violet);
+  --color-violet-800: var(--cyber-violet);
+  --color-violet-900: var(--cyber-violet);
+  --color-violet-950: var(--cyber-violet);
 }
 
 /* Base custom styles to ensure flawless visual delivery */
@@ -168,19 +194,19 @@ body {
 }
 
 .glow-cyan {
-  text-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+  text-shadow: none;
 }
 
 .glow-violet {
-  text-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
+  text-shadow: none;
 }
 
 .box-glow-cyan {
-  box-shadow: 0 0 15px rgba(0, 229, 255, 0.15);
+  box-shadow: none;
 }
 
 .box-glow-violet {
-  box-shadow: 0 0 15px rgba(139, 92, 246, 0.15);
+  box-shadow: none;
 }
 
 /* Glassmorphism utility card */
@@ -195,12 +221,12 @@ body {
 .cyber-glass-hover:hover {
   background: var(--glass-bg-hover);
   border-color: var(--glass-border-hover);
-  box-shadow: 0 0 20px rgba(0, 229, 255, 0.05);
+  box-shadow: 0 0 12px rgba(20, 184, 166, 0.04);
 }
 
 .academic-bg-glow {
-  background-image: radial-gradient(circle at 30% 30%, rgba(0, 229, 255, 0.04), transparent 41%),
-                    radial-gradient(circle at 70% 70%, rgba(139, 92, 246, 0.04), transparent 41%);
+  background-image: radial-gradient(circle at 30% 30%, rgba(20, 184, 166, 0.03), transparent 41%),
+                    radial-gradient(circle at 70% 70%, rgba(99, 102, 241, 0.03), transparent 41%);
 }
 
 html[data-theme='light'] .academic-bg-glow {

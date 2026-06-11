@@ -138,7 +138,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
           {showNotifications && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
-              <div className="absolute right-0 mt-3.5 w-80 md:w-96 z-50 rounded-xl bg-slate-900 border border-slate-800 shadow-xl p-4 box-glow-cyan animate-in fade-in slide-in-from-top-2 duration-200 font-sans">
+              <div className="absolute right-0 mt-3.5 w-80 md:w-96 z-50 rounded-xl bg-slate-900 border border-slate-800 shadow-2xl p-4 animate-in fade-in slide-in-from-top-2 duration-200 font-sans">
                 <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-800">
                   <span className="text-xs font-mono font-bold text-slate-300 flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-cyber-cyan" />
@@ -304,7 +304,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
           {showProfileDropdown && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setShowProfileDropdown(false)} />
-              <div className="absolute right-0 mt-3.5 w-64 z-50 rounded-xl bg-slate-900 border border-slate-800 shadow-xl p-4 box-glow-cyan animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="absolute right-0 mt-3.5 w-64 z-50 rounded-xl bg-slate-900 border border-slate-800 shadow-2xl p-4 animate-in fade-in slide-in-from-top-2 duration-200">
                 
                 {/* Visual Header */}
                 <div className="pb-3 mb-3 border-b border-slate-800 flex items-center gap-2">
