@@ -813,7 +813,7 @@ export default function App() {
     <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-cyan-500/30 selection:text-white flex flex-col font-sans antialiased overflow-x-hidden">
       {!currentUser ? (
         /* Cyber Neon Secure Login Page Screen with Premium Hero Section */
-        <div className="flex-1 flex flex-col lg:flex-row items-center justify-center p-6 md:p-12 relative min-h-screen gap-12 lg:gap-16 max-w-7xl mx-auto w-full">
+        <div className="flex-1 flex flex-col lg:flex-row items-center justify-center p-6 md:p-12 relative min-h-screen gap-8 lg:gap-16 max-w-7xl mx-auto w-full">
           {/* Floating Theme Toggle Switch for Login Screen (Icon-only) */}
           <div className="absolute top-6 right-6 z-50">
             <button
@@ -834,17 +834,17 @@ export default function App() {
           <div className="academic-bg-glow absolute inset-0 pointer-events-none" />
 
           {/* PREMIUM HERO SECTION (FIX 1) */}
-          <div className="flex-1 flex flex-col justify-center max-w-lg space-y-6 text-left relative z-10 animate-in fade-in slide-in-from-left-6 duration-500">
-            <div className="p-3 cyber-glass rounded-2xl w-fit flex items-center gap-3 shadow-xl">
+          <div className="flex-1 flex flex-col justify-center max-w-lg space-y-6 text-center lg:text-left relative z-10 animate-in fade-in slide-in-from-left-6 duration-500 w-full px-4 sm:px-0">
+            <div className="p-3 cyber-glass rounded-2xl w-fit mx-auto lg:mx-0 flex items-center gap-3 shadow-xl">
               <img
                 src="https://www.mvgrce.com/sites/default/files/logo.png"
                 alt="MVGR College Logo"
-                className="h-14 w-auto object-contain filter drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]"
+                className="h-10 sm:h-12 md:h-14 w-auto object-contain filter drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}
               />
-              <div className="text-left font-sans">
+              <div className="text-left font-sans hidden sm:block">
                 <p className="text-[9px] font-mono font-bold text-theme-muted-text tracking-widest uppercase">Estd 1997</p>
                 <h4 className="text-sm font-black text-theme-hero-main tracking-tight uppercase leading-none">MVGR College</h4>
                 <p className="text-[9px] text-theme-muted-text">Autonomous Institution</p>
@@ -852,16 +852,16 @@ export default function App() {
             </div>
 
             <div className="space-y-3.5">
-              <h1 className="font-display font-black text-4xl sm:text-5xl lg:text-6xl tracking-tight text-theme-hero-main block uppercase leading-none">
+              <h1 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight text-theme-hero-main block uppercase leading-none">
                 MVGR College <br/>
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-theme-hero-cyan to-theme-hero-violet">Student Resource Hub</span>
               </h1>
-              <p className="text-sm text-theme-body-text leading-relaxed font-sans font-medium">
+              <p className="text-sm text-theme-body-text leading-relaxed font-sans font-medium px-2 sm:px-6 lg:px-0">
                 Academic materials, collaboration, and smart resource management for students and faculty. Access notes, syllabus, term solutions, and file discrepancies instantly.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-800 font-sans text-xs text-theme-body-text">
+            <div className="hidden sm:grid grid-cols-2 gap-4 pt-4 border-t border-slate-800 font-sans text-xs text-theme-body-text">
               <div className="space-y-1.5 p-3 rounded-xl cyber-glass">
                 <span className="text-theme-hero-cyan font-extrabold font-mono text-[11px] uppercase tracking-wide">01 // BROWSE DISCOVER</span>
                 <p className="text-[11px] leading-snug text-theme-body-text">Academic databases, study guides, and notes mapped exactly by term semester.</p>
