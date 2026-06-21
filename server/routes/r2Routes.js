@@ -299,32 +299,13 @@ function normalizeSemester(val) {
   return match ? match[0] : s.replace(/[^0-9]/g, "");
 }
 
-function normalizeDepartment(val) {
-  if (!val) return "";
-  const s = String(val).toLowerCase();
-  return s.replace(/\s+department$/i, "")
-    .replace(/^information technology$/i, "it")
-    .replace(/^computer science and engineering$/i, "cse")
-    .replace(/^computer science$/i, "cse")
-    .trim();
-}
-
-function normalizeYear(val) {
-  if (!val) return "";
-  const s = String(val).toLowerCase();
-  const match = s.match(/\d+/);
-  return match ? match[0] : "";
-}
-
-function normalizeSemester(val) {
-  if (!val) return "";
-  let s = String(val).toLowerCase();
-  if (s.includes("iv")) return "4";
-  if (s.includes("iii")) return "3";
-  if (s.includes("ii")) return "2";
-  if (s.includes("i")) return "1";
-  const match = s.match(/\d+/);
-  return match ? match[0] : "";
+function parseR2StoragePath(storagePath) {
+  // materials/IT/2/2/PLM/MAT-286636/plm3.pdf
+  const parts = storagePath.split('/');
+  if (parts.length >= 4) {
+      return { department: parts[1], year: parts[2], semester: parts[3] };
+  }
+  return { department: "", year: "", semester: "" };
 }
 
 // 4. POST /api/r2/signed-url
