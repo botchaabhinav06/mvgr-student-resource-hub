@@ -310,16 +310,21 @@ function parseR2StoragePath(storagePath) {
 
 // 4. POST /api/r2/signed-url
 router.post('/signed-url', verifyFirebaseToken, loadUserProfile, async (req, res) => {
+  console.log('[DEBUG SIGNED-URL] Request received.');
   try {
     validateR2Env();
 
-    const { materialId, storagePath, action, fileName } = req.body;
-
-    console.log('[DEBUG SIGNED-URL] Request payload verification:', {
+    const { materialId, storagePath, action, fileName } = req.body || {};
+    
+    console.log('[DEBUG SIGNED-URL] Request body:', {
       action,
       storagePath,
       materialId
     });
+
+    if (!req.body) {
+         return res.status(400).json({ ok: false, error: 'Missing request body' });
+    }
 
     // Validation
     if (!storagePath || typeof storagePath !== 'string') {

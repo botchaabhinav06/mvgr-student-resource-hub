@@ -131,3 +131,6 @@ In a full institutional production version, the bucket should be changed to priv
 * **Push Notifications Service**: Register service-worker web push alerts to notify students of exam-focused preparation changes.
 * **Light / Dark Canvas Toggles**: Add accessible standard color themes for adaptable viewing preferences.
 * **Localized PDF Markup**: Incorporate inline PDF annotation tools to take student digital notes on course slides natively.
+
+
+##Last verified: Production R2 storage and legacy cleanup are stable.

@@ -720,11 +720,13 @@ export default function App() {
             throw new Error(`Cloudflare R2 file was deleted, but Firestore record deletion failed. Please retry or clean the record manually. Error: ${fsErr.message}`);
           }
 
-        } else if (item && item.storageProvider === "supabase" && item.storagePath) {
+        } else if (item && (item.storageProvider === "supabase" || !item.storageProvider) && item.storagePath) {
           // Delete PDF in Supabase Storage
           const { error } = await supabase.storage.from("materials-pdfs").remove([item.storagePath]);
           if (error) {
-            throw new Error(`Supabase PDF destruction failed: ${error.message}`);
+            console.warn(`Legacy Supabase file deletion failed for ${item.storagePath}: ${error.message}. Proceeding to delete Firestore document.`);
+            setToastMessage("Legacy Supabase record removed from catalog. The old storage file may remain in Supabase and can be cleaned manually later.");
+            setTimeout(() => setToastMessage(""), 6000);
           }
           
           // Delete Firestore document

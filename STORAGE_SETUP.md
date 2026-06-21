@@ -117,3 +117,5 @@ Due to issues with passing PEM private keys containing newlines via environment 
    `FIREBASE_PRIVATE_KEY_BASE64=<your_base64_string>`
 4. You do not need to set `FIREBASE_PRIVATE_KEY` if this is set.
 
+
+##Last verified: Production R2 storage and legacy cleanup are stable.
