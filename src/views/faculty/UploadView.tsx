@@ -6,7 +6,7 @@ import { supabase } from "../../lib/supabaseClient";
 
 interface UploadViewProps {
   user: FacultyProfile;
-  onUploadSuccess: (material: Omit<Material, "uploadedBy" | "uploadedByName" | "uploadDate" | "downloadsCount"> & { id: string; storagePath: string; storageProvider: string }) => void;
+  onUploadSuccess: (material: Omit<Material, "uploadedBy" | "uploadedByName" | "uploadDate" | "downloadsCount"> & { id: string; storagePath: string; storageProvider: string; bucketName?: string }) => void | Promise<void>;
   setScreen: (screen: ActiveScreen) => void;
   prefilledSubject?: string;
   prefilledUploadType?: "study_material" | "question_paper";
@@ -150,51 +150,99 @@ export const UploadView: React.FC<UploadViewProps> = ({
     setUploading(true);
 
     try {
-      // 1. Generate new ID
-      const materialId = `MAT-${Math.floor(100000 + Math.random() * 900000)}`;
-      
-      // 2. Generate path: materials/{department}/{year}/{semester}/{materialId}/{timestamp}_{safeFileName}
-      const safeFileName = rawFile.name.replace(/[^a-zA-Z0-9.]/g, "_");
-      const timestamp = Date.now();
-      const storagePath = `materials/${department}/${year}/${semester}/${materialId}/${timestamp}_${safeFileName}`;
-
-      // 3. Upload to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("materials-pdfs")
-        .upload(storagePath, rawFile, {
-          cacheControl: "3600",
-          upsert: false,
-          contentType: "application/pdf",
-        });
-
-      if (uploadError) {
-        throw new Error(uploadError.message || "Could not complete Supabase file write.");
+      // Pre-upload Health Check
+      try {
+        const healthRes = await fetch("/api/r2/health");
+        const healthCt = healthRes.headers.get("content-type") || "";
+        if (!healthRes.ok || !healthCt.includes("application/json")) {
+          throw new Error("R2 backend health check failed");
+        }
+        const healthData = await healthRes.json();
+        if (!healthData.ok) {
+          throw new Error(healthData.message || "R2 configuration inactive");
+        }
+      } catch (healthErr) {
+        console.warn("R2 Health Check Alert:", healthErr);
+        throw new Error("Cloudflare R2 backend is not available. Please retry after backend reload.");
       }
 
-      // 4. Resolve the public URL from the bucket
-      const { data: { publicUrl } } = supabase.storage
-        .from("materials-pdfs")
-        .getPublicUrl(storagePath);
+      // 1. Generate new ID
+      const materialId = `MAT-${Math.floor(100000 + Math.random() * 900000)}`;
 
-      // 5. Fire parent context success event
-      onUploadSuccess({
-        id: materialId,
-        title,
-        category,
-        department,
-        year,
-        semester,
-        fileName: rawFile.name,
-        fileSize: simulatedFile ? simulatedFile.size : "1.5 MB",
-        status: "active",
-        previewUrl: publicUrl,
-        storagePath: storagePath,
-        storageProvider: "supabase",
-        subject: subject.trim() === "" ? "General" : subject.trim(),
-        unit: uploadType === "question_paper" ? "General" : (unit.trim() === "" ? "General" : unit.trim()),
+      // 2. Prepare FormData
+      const formData = new FormData();
+      formData.append("file", rawFile);
+      formData.append("department", department);
+      formData.append("year", String(year));
+      formData.append("semester", String(semester));
+      formData.append("category", category);
+      formData.append("title", title);
+      formData.append("subject", subject.trim() === "" ? "General" : subject.trim());
+      formData.append("materialId", materialId);
+
+      // 3. Post to backend
+      const response = await fetch("/api/r2/material-upload", {
+        method: "POST",
+        body: formData,
       });
 
-      setSuccessToast("RESOURCE SECURED // MATERIAL COMMITTED TO CLOUD ENVELOPE");
+      const contentType = response.headers.get("content-type") || "";
+
+      if (!response.ok) {
+        if (contentType.includes("application/json")) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || errorData.message || `Server responded with status ${response.status}`);
+        } else {
+          const responseText = await response.text().catch(() => "No response content");
+          throw new Error(`R2 upload endpoint returned non-JSON response. HTTP ${response.status}. Preview: ${responseText.slice(0, 160)}`);
+        }
+      }
+
+      if (!contentType.includes("application/json")) {
+        const responseText = await response.text().catch(() => "No response content");
+        throw new Error(
+          `R2 upload endpoint returned non-JSON response. HTTP ${response.status}. Preview: ${responseText.slice(0, 160)}`
+        );
+      }
+
+      const r2Data = await response.json();
+
+      // 4. Formats file size
+      const formatBytes = (bytes: number) => {
+        if (bytes === 0) return "0 Bytes";
+        const k = 1024;
+        const flexSizes = ["Bytes", "KB", "MB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + flexSizes[i];
+      };
+
+      const displaySize = r2Data.fileSize ? formatBytes(r2Data.fileSize) : (simulatedFile ? simulatedFile.size : "1.5 MB");
+
+      // 5. Fire parent context success event (async Firestore creation)
+      try {
+        await onUploadSuccess({
+          id: materialId,
+          title,
+          category,
+          department,
+          year,
+          semester,
+          fileName: r2Data.fileName || rawFile.name,
+          fileSize: displaySize,
+          status: "active",
+          previewUrl: "", // Cloudflare R2 preview to be enabled in Phase 9.4
+          storagePath: r2Data.storagePath,
+          storageProvider: "cloudflare-r2",
+          bucketName: r2Data.bucketName || "mvgr-materials-pdfs",
+          subject: subject.trim() === "" ? "General" : subject.trim(),
+          unit: uploadType === "question_paper" ? "General" : (unit.trim() === "" ? "General" : unit.trim()),
+        } as any);
+      } catch (firestoreErr: any) {
+        console.error("Firestore linkage error after R2 upload:", firestoreErr);
+        throw new Error(`FIRESTORE_LINKAGE_FAILURE: Cloudflare R2 upload succeeded, but Firestore catalog linking failed. Orphaned R2 file cleanup may be required later (${r2Data.storagePath}). Error: ${firestoreErr.message || firestoreErr}`);
+      }
+
+      setSuccessToast("RESOURCE SECURED // MATERIAL COMMITTED TO CLOUD ENVELOPE (R2)");
       setTimeout(() => {
         setSuccessToast("");
         // Redirect straight to catalog view manager
@@ -202,7 +250,11 @@ export const UploadView: React.FC<UploadViewProps> = ({
       }, 2000);
     } catch (err: any) {
       console.error(err);
-      setErrorText(`UPLOAD PIPELINE FAILURE // ${err.message || err}`);
+      if (err.message && err.message.includes("FIRESTORE_LINKAGE_FAILURE")) {
+        setErrorText(err.message);
+      } else {
+        setErrorText(`UPLOAD PIPELINE FAILURE // Cloudflare R2 upload failed. Please try again. Detailed: ${err.message || err}`);
+      }
     } finally {
       setUploading(false);
     }

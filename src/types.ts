@@ -43,6 +43,9 @@ export interface Material {
   status: "active" | "inactive";
   storagePath?: string;
   storageProvider?: "supabase" | "firebase" | string;
+  bucketName?: string;
+  contentType?: string;
+  downloadUrl?: string;
   createdAt?: string;
   updatedAt?: string;
   subject?: string;

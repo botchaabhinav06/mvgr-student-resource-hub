@@ -34,6 +34,7 @@ import { ManageView as FacultyManage } from "./views/faculty/ManageView";
 import { QuestionPapersView as FacultyQuestionPapers } from "./views/faculty/QuestionPapersView";
 import { ReportsView as FacultyReports } from "./views/faculty/ReportsView";
 import { ProfileView as FacultyProfileView } from "./views/faculty/ProfileView";
+import { R2TestView } from "./views/R2TestView";
 
 const mapFirestoreUser = (uid: string, data: any): StudentProfile | FacultyProfile => {
   const role = data.role === "student" ? "student" : (data.role === "admin" ? "admin" : "faculty");
@@ -200,12 +201,17 @@ export default function App() {
           uploadedById: data.uploadedById || "",
           uploadDate: data.uploadDate || new Date().toISOString(),
           downloadsCount: Number(data.downloadsCount || 0),
-          fileName: data.fileName || "",
+          fileName: data.fileName || data.file || "",
           previewUrl: data.previewUrl || "",
-          fileSize: data.fileSize || "1.5 MB",
+          fileSize: String(data.fileSize || data.size || "1.5 MB"),
           status: (data.status || "active") as "active" | "inactive",
           subject: data.subject || "General",
           unit: data.unit || "General",
+          storageProvider: data.storageProvider || "supabase",
+          bucketName: data.bucketName || "",
+          storagePath: data.storagePath || "",
+          contentType: data.contentType || "application/pdf",
+          downloadUrl: data.downloadUrl || "",
         });
       });
       list.sort((a, b) => new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime());
@@ -410,6 +416,72 @@ export default function App() {
 
   // State actions: Student download click triggers increment in Firestore
   const handleDownloadMaterial = async (m: Material) => {
+    if (m.storageProvider === "cloudflare-r2") {
+      if (!m.storagePath) {
+        setToastMessage("Error: Missing secure storage path for R2 download.");
+        setTimeout(() => setToastMessage(""), 5000);
+        return;
+      }
+      setToastMessage("Preparing secure PDF download link...");
+      try {
+        const response = await fetch("/api/r2/signed-url", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            storagePath: m.storagePath,
+            action: "download",
+            fileName: m.fileName
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.error || `Server responded with status ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (!data.ok || !data.signedUrl) {
+          throw new Error("Invalid signed URL response from server");
+        }
+
+        const signedUrl = data.signedUrl;
+
+        // Trigger safe client-side download by initiating open/redirect with _blank target to bypass sandbox iframe limits
+        const a = document.createElement("a");
+        a.href = signedUrl;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        // Since we overridden ResponseContentDisposition, the browser will treat it as attachment natively
+        a.setAttribute("download", m.fileName || "material.pdf");
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        // Now update Firestore count since download successfully started
+        const docRef = doc(db, "materials", m.id);
+        await updateDoc(docRef, {
+          downloadsCount: (m.downloadsCount || 0) + 1,
+          updatedAt: new Date().toISOString()
+        });
+
+        // Record list metrics locally
+        if (!downloadHistory.some((item) => item.id === m.id)) {
+          setDownloadHistory((prev) => [{ ...m, downloadsCount: (m.downloadsCount || 0) + 1 }, ...prev]);
+        }
+
+        setToastMessage("PDF download started.");
+        setTimeout(() => setToastMessage(""), 4000);
+        return;
+      } catch (err: any) {
+        console.error("Cloudflare R2 signed URL download preparation failure:", err);
+        setToastMessage("Unable to prepare secure PDF link. Please try again.");
+        setTimeout(() => setToastMessage(""), 5000);
+        throw err;
+      }
+    }
+
     if (!m.previewUrl) {
       setToastMessage("PDF preview is not available for this material.");
       setTimeout(() => setToastMessage(""), 4000);
@@ -537,6 +609,7 @@ export default function App() {
       status: "active",
       storagePath: newMatData.storagePath || "",
       storageProvider: newMatData.storageProvider || "supabase",
+      bucketName: newMatData.bucketName || "",
       createdAt: now,
       updatedAt: now,
       subject: newMatData.subject || "General",
@@ -547,7 +620,11 @@ export default function App() {
       const docRef = doc(db, "materials", matId);
       await setDoc(docRef, docData);
       
-      setToastMessage("Material uploaded and linked successfully using Supabase Storage.");
+      if (newMatData.storageProvider === "cloudflare-r2") {
+        setToastMessage("Material uploaded and linked successfully using Cloudflare R2.");
+      } else {
+        setToastMessage("Material uploaded and linked successfully using Supabase Storage.");
+      }
       setTimeout(() => setToastMessage(""), 5000);
     } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, `materials/${matId}`);
@@ -578,39 +655,97 @@ export default function App() {
   const handleFacultyDeleteMaterial = async (ids: string | string[]) => {
     const idList = Array.isArray(ids) ? ids : [ids];
     let successes = 0;
+    let r2Successes = 0;
     const failures: string[] = [];
 
     for (const id of idList) {
       const item = materials.find(m => m.id === id);
       try {
-        if (item && item.storageProvider === "supabase" && item.storagePath) {
+        if (item && item.storageProvider === "cloudflare-r2") {
+          // 2. Validate material.storagePath exists
+          if (!item.storagePath) {
+            throw new Error("Missing secure storage path (storagePath) for Cloudflare R2 material.");
+          }
+
+          // 3. Call POST /api/r2/delete-object
+          const response = await fetch("/api/r2/delete-object", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              storagePath: item.storagePath
+            })
+          });
+
+          if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            const errMsg = errData.message || `HTTP error ${response.status}`;
+            throw new Error(`Cloudflare R2 file deletion failed. Material record was not deleted. Details: ${errMsg}`);
+          }
+
+          const resData = await response.json().catch(() => ({}));
+          if (!resData.ok) {
+            throw new Error(`Cloudflare R2 file deletion failed. Material record was not deleted. Details: ${resData.message || 'unknown error'}`);
+          }
+
+          r2Successes++;
+
+          // 4. Delete Firestore document after successful R2 delete
+          try {
+            const docRef = doc(db, "materials", id);
+            await deleteDoc(docRef);
+            successes++;
+          } catch (fsErr: any) {
+            console.error(`Firestore delete failed after R2 delete succeeded for ${id}:`, fsErr);
+            throw new Error(`Cloudflare R2 file was deleted, but Firestore record deletion failed. Please retry or clean the record manually. Error: ${fsErr.message}`);
+          }
+
+        } else if (item && item.storageProvider === "supabase" && item.storagePath) {
           // Delete PDF in Supabase Storage
           const { error } = await supabase.storage.from("materials-pdfs").remove([item.storagePath]);
           if (error) {
             throw new Error(`Supabase PDF destruction failed: ${error.message}`);
           }
+          
+          // Delete Firestore document
+          const docRef = doc(db, "materials", id);
+          await deleteDoc(docRef);
+          successes++;
+        } else {
+          // Default fallback (e.g. catalog indexing only)
+          const docRef = doc(db, "materials", id);
+          await deleteDoc(docRef);
+          successes++;
         }
-        
-        // Delete Firestore document
-        const docRef = doc(db, "materials", id);
-        await deleteDoc(docRef);
-        successes++;
       } catch (err: any) {
         console.error(`Failed to delete material ${id}:`, err);
         failures.push(item?.title || id);
+        // Direct descriptive toast message update since we want immediate visibility
+        setToastMessage(err.message || String(err));
+        setTimeout(() => setToastMessage(""), 6000);
       }
     }
 
     if (failures.length > 0) {
       const errorMsg = `Completed with issues. Purged ${successes}/${idList.length} files. Failed files: ${failures.join(", ")}`;
-      setToastMessage(errorMsg);
-      setTimeout(() => setToastMessage(""), 7000);
+      // Check if it was an R2-specific error and we already set the toast inside the loop,
+      // but let's override with a summary or keep it descriptive.
       throw new Error(errorMsg);
     } else {
-      setToastMessage(idList.length > 1 
-        ? `Successfully purged ${successes} materials from catalog indexing and Supabase Storage.`
-        : `Successfully deleted material and associated Supabase PDF.`
-      );
+      const containsR2 = idList.some(id => {
+        const item = materials.find(m => m.id === id);
+        return item && item.storageProvider === "cloudflare-r2";
+      });
+
+      if (containsR2 && idList.length === 1) {
+        setToastMessage("Material and Cloudflare R2 file deleted successfully.");
+      } else {
+        setToastMessage(idList.length > 1 
+          ? `Successfully purged ${successes} materials from catalog indexing and storage.`
+          : `Successfully deleted material and associated Supabase PDF.`
+        );
+      }
       setTimeout(() => setToastMessage(""), 4000);
     }
   };
@@ -797,6 +932,11 @@ export default function App() {
       }
     }
   };
+
+  // Render R2 test view directly if on that route
+  if (window.location.pathname === "/r2-test" || window.location.hash === "#/r2-test") {
+    return <R2TestView />;
+  }
 
   if (authInitializing) {
     return (
