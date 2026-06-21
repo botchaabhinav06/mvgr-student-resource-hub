@@ -101,6 +101,19 @@ Ensure the backend server has the following variables set up correctly:
 - `CLOUDFLARE_R2_ENDPOINT`
 - `FIREBASE_PROJECT_ID`
 - `FIREBASE_CLIENT_EMAIL`
-- `FIREBASE_PRIVATE_KEY`
+- `FIREBASE_PRIVATE_KEY` (Fallback)
+- `FIREBASE_PRIVATE_KEY_BASE64` (Recommended for Render)
 - `FRONTEND_URL`
+
+---
+
+## 💡 Recommended: Firebase Admin Key on Render
+
+Due to issues with passing PEM private keys containing newlines via environment variables, it is recommended to use Base64 encoding.
+
+1. Take the full `private_key` value from your service account JSON (it contains `\n` characters).
+2. Encode this string to Base64 (e.g., using `echo -n "..." | base64` in your terminal).
+3. Set the encoded result in your Render environment variable:
+   `FIREBASE_PRIVATE_KEY_BASE64=<your_base64_string>`
+4. You do not need to set `FIREBASE_PRIVATE_KEY` if this is set.
 

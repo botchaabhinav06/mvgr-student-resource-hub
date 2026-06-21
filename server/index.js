@@ -48,6 +48,14 @@ async function startServer() {
   // Mount Cloudflare R2 API routes
   app.use('/api/r2', r2Routes);
 
+  // Safe root route check
+  app.get('/', (req, res) => {
+    res.json({
+      ok: true,
+      message: 'MVGR Student Resource Hub backend is running',
+    });
+  });
+
   // General health check backplane
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString() });

@@ -3,25 +3,28 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import admin from 'firebase-admin';
 
+function getPrivateKey() {
+  if (process.env.FIREBASE_PRIVATE_KEY_BASE64) {
+    return Buffer.from(process.env.FIREBASE_PRIVATE_KEY_BASE64, "base64").toString("utf8");
+  }
+
+  const rawKey = process.env.FIREBASE_PRIVATE_KEY;
+  if (!rawKey) return undefined;
+
+  return rawKey
+    .replace(/^"|"$/g, "")
+    .replace(/\\n/g, "\n");
+}
+
 const projectId = process.env.FIREBASE_PROJECT_ID;
 const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+const privateKey = getPrivateKey();
 
 let isConfigured = false;
 let appInstance = null;
 
 if (projectId && clientEmail && privateKey) {
   try {
-    // Clean up wrapping quotes and replace escaped newlines
-    let cleanedKey = privateKey.trim();
-    if (cleanedKey.startsWith('"') && cleanedKey.endsWith('"')) {
-      cleanedKey = cleanedKey.slice(1, -1);
-    }
-    if (cleanedKey.startsWith("'") && cleanedKey.endsWith("'")) {
-      cleanedKey = cleanedKey.slice(1, -1);
-    }
-    const formattedPrivateKey = cleanedKey.replace(/\\n/g, '\n');
-
     // Avoid duplicate initialization
     const apps = getApps();
     if (apps.length === 0) {
@@ -29,7 +32,7 @@ if (projectId && clientEmail && privateKey) {
         credential: cert({
           projectId,
           clientEmail,
-          privateKey: formattedPrivateKey,
+          privateKey,
         }),
       });
     } else {
