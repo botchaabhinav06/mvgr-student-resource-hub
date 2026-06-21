@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { X, Download, AlertCircle, ExternalLink, FileText, Loader2 } from "lucide-react";
 import { Material } from "../types";
+import { auth } from "../firebase/firebaseConfig";
 
 interface PDFPreviewModalProps {
   material: Material | null;
@@ -45,12 +46,29 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
         setPrevError(null);
         setPrevErrorDetails(null);
         try {
+          const token = await auth.currentUser?.getIdToken();
+          if (!token) {
+            const expiredMsg = "Your session expired. Please log in again.";
+            if (active) {
+              setPrevError(expiredMsg);
+              setPrevErrorDetails({
+                status: 401,
+                error: expiredMsg,
+                action: "preview",
+                storagePath: material.storagePath
+              });
+            }
+            throw new Error(expiredMsg);
+          }
+
           const response = await fetch("/api/r2/signed-url", {
             method: "POST",
             headers: {
-              "Content-Type": "application/json"
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
             },
             body: JSON.stringify({
+              materialId: material.id,
               storagePath: material.storagePath,
               action: "preview",
               fileName: material.fileName
@@ -58,8 +76,16 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
           });
 
           if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            const errMsg = errData.error || `Server responded with status ${response.status}`;
+            let errMsg = `Server responded with status ${response.status}`;
+            if (response.status === 401) {
+              errMsg = "Your session expired. Please log in again.";
+            } else if (response.status === 403) {
+              errMsg = "You are not authorized to access this material.";
+            } else {
+              const errData = await response.json().catch(() => ({}));
+              errMsg = errData.error || errData.message || errMsg;
+            }
+
             if (active) {
               setPrevError(errMsg);
               setPrevErrorDetails({

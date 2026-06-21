@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import r2Routes from './routes/r2Routes.js';
+import { isConfigured } from './firebaseAdmin.js';
 
 const PORT = 3000;
 
@@ -34,6 +35,24 @@ async function startServer() {
   // General health check backplane
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString() });
+  });
+
+  // Safe Admin verification backplane
+  app.get('/api/auth/admin-health', (req, res) => {
+    if (isConfigured) {
+      res.json({
+        ok: true,
+        firebaseAdminConfigured: true,
+        projectIdConfigured: true,
+        message: 'Firebase Admin backend is configured',
+      });
+    } else {
+      res.json({
+        ok: false,
+        firebaseAdminConfigured: false,
+        message: 'Firebase Admin backend is not configured',
+      });
+    }
   });
 
   // Integrate Vite Dev Server middleware or static file serving

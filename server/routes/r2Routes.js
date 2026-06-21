@@ -4,6 +4,9 @@ import path from 'path';
 import { PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { s3Client, bucketName, validateR2Env } from '../r2Client.js';
+import { verifyFirebaseToken } from '../middleware/verifyFirebaseToken.js';
+import { loadUserProfile } from '../middleware/loadUserProfile.js';
+import { adminDb } from '../firebaseAdmin.js';
 
 const router = express.Router();
 
@@ -132,9 +135,28 @@ router.post('/test-upload', (req, res, next) => {
 });
 
 // 3. POST /api/r2/material-upload
-router.post('/material-upload', (req, res, next) => {
+router.post('/material-upload', verifyFirebaseToken, loadUserProfile, (req, res, next) => {
   console.log('[DEBUG R2-UPLOAD] Hit /api/r2/material-upload endpoint. Content-Type:', req.headers['content-type']);
   
+  // ROLE CHECK FOR UPLOAD: Allow upload only if req.userProfile.role is "faculty" or "admin".
+  const profile = req.userProfile || {};
+  const role = profile.role;
+  const status = profile.status || profile.accountStatus || "active"; // check if status is active
+
+  if (role !== "faculty" && role !== "admin") {
+    return res.status(403).json({
+      ok: false,
+      message: "Only active faculty or admin users can upload materials"
+    });
+  }
+
+  if (status !== "active") {
+    return res.status(403).json({
+      ok: false,
+      message: "Only active faculty or admin users can upload materials"
+    });
+  }
+
   try {
     uploadInstance(req, res, async (err) => {
       console.log('[DEBUG R2-UPLOAD] Multer callback invoked. errStatus:', err ? err.message : 'none', 'File received:', !!req.file, 'Body fields:', Object.keys(req.body || {}));
@@ -214,6 +236,10 @@ router.post('/material-upload', (req, res, next) => {
 
         await s3Client.send(command);
 
+        const verifiedName = req.userProfile.facultyName || req.userProfile.name || req.user.email || "Faculty User";
+        const verifiedRole = req.userProfile.role;
+        const verifiedDept = req.userProfile.department || department;
+
         return res.json({
           ok: true,
           storageProvider: "cloudflare-r2",
@@ -221,7 +247,11 @@ router.post('/material-upload', (req, res, next) => {
           storagePath: storagePath,
           fileName: sanitizedName,
           fileSize: req.file.size,
-          contentType: "application/pdf"
+          contentType: "application/pdf",
+          uploadedById: req.user.uid,
+          uploadedByName: verifiedName,
+          uploadedByRole: verifiedRole,
+          uploadedByDepartment: verifiedDept
         });
 
       } catch (error) {
@@ -242,16 +272,17 @@ router.post('/material-upload', (req, res, next) => {
 });
 
 // 4. POST /api/r2/signed-url
-router.post('/signed-url', async (req, res) => {
+router.post('/signed-url', verifyFirebaseToken, loadUserProfile, async (req, res) => {
   try {
     validateR2Env();
 
-    const { storagePath, action, fileName } = req.body;
+    const { materialId, storagePath, action, fileName } = req.body;
 
     console.log('[DEBUG SIGNED-URL] Request payload verification:', {
       action,
       storagePath,
       fileName,
+      materialId,
       bucketName,
       endpointConfigured: !!s3Client
     });
@@ -291,6 +322,97 @@ router.post('/signed-url', async (req, res) => {
       });
     }
 
+    // Check materialId existence
+    if (!materialId || typeof materialId !== 'string') {
+      return res.status(400).json({
+        ok: false,
+        message: "Material ID is required for secure file access"
+      });
+    }
+
+    // Load Firestore material
+    if (!adminDb) {
+      return res.status(500).json({
+        ok: false,
+        message: "Database integration unconfigured"
+      });
+    }
+
+    const materialDoc = await adminDb.collection('materials').doc(materialId).get();
+    if (!materialDoc.exists) {
+      return res.status(404).json({
+        ok: false,
+        message: "Material not found"
+      });
+    }
+
+    const material = materialDoc.data();
+
+    // Confirm storage provider is cloudflare-r2
+    if (material.storageProvider !== "cloudflare-r2") {
+      return res.status(400).json({
+        ok: false,
+        message: "Requested material is not stored in Cloudflare R2"
+      });
+    }
+
+    // Confirm storage path matches
+    if (material.storagePath !== storagePath) {
+      return res.status(400).json({
+        ok: false,
+        message: "Storage path mismatch"
+      });
+    }
+
+    // Confirm status is active if status field exists on material
+    if (material.status && material.status !== 'active') {
+      return res.status(403).json({
+        ok: false,
+        message: "You are not authorized to access this material"
+      });
+    }
+
+    // Role-based Access rules
+    const profile = req.userProfile || {};
+    const userRole = profile.role;
+    const userDept = String(profile.department || "").trim().toLowerCase();
+    const userYear = String(profile.year || "").trim();
+    const userSem = String(profile.semester || "").trim();
+
+    if (userRole === "admin") {
+      // Access granted
+    } else if (userRole === "faculty") {
+      const matDept = String(material.department || "").trim().toLowerCase();
+      const matUploadedById = String(material.uploadedById || "").trim();
+      const currentUid = String(req.user.uid || "").trim();
+
+      const isOwner = matUploadedById && matUploadedById === currentUid;
+      const isSameDept = matDept && matDept === userDept;
+
+      if (!isOwner && !isSameDept) {
+        return res.status(403).json({
+          ok: false,
+          message: "You are not authorized to access this material"
+        });
+      }
+    } else if (userRole === "student") {
+      const matDept = String(material.department || "").trim().toLowerCase();
+      const matYear = String(material.year || "").trim();
+      const matSem = String(material.semester || "").trim();
+
+      if (matDept !== userDept || matYear !== userYear || matSem !== userSem) {
+        return res.status(403).json({
+          ok: false,
+          message: "You are not authorized to access this material"
+        });
+      }
+    } else {
+      return res.status(403).json({
+        ok: false,
+        message: "You are not authorized to access this material"
+      });
+    }
+
     // Prepare GetObject params
     const getParams = {
       Bucket: bucketName,
@@ -318,12 +440,6 @@ router.post('/signed-url', async (req, res) => {
       storagePath,
       expiresIn: 300
     });
-
-    /* TODO for Phase 10 access hardening:
-       - Verify Firebase ID token on backend (req.headers.authorization)
-       - Verify student department/year/semester access before signing URL
-       - Verify faculty/admin permissions
-     */
 
     return res.json({
       ok: true,

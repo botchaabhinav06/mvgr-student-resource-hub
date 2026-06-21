@@ -424,12 +424,19 @@ export default function App() {
       }
       setToastMessage("Preparing secure PDF download link...");
       try {
+        const token = await auth.currentUser?.getIdToken();
+        if (!token) {
+          throw new Error("Your session expired. Please log in again.");
+        }
+
         const response = await fetch("/api/r2/signed-url", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
           },
           body: JSON.stringify({
+            materialId: m.id,
             storagePath: m.storagePath,
             action: "download",
             fileName: m.fileName
@@ -437,8 +444,16 @@ export default function App() {
         });
 
         if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          throw new Error(errData.error || `Server responded with status ${response.status}`);
+          let errMsg = `Server responded with status ${response.status}`;
+          if (response.status === 401) {
+            errMsg = "Your session expired. Please log in again.";
+          } else if (response.status === 403) {
+            errMsg = "You are not authorized to access this material.";
+          } else {
+            const errData = await response.json().catch(() => ({}));
+            errMsg = errData.error || errData.message || errMsg;
+          }
+          throw new Error(errMsg);
         }
 
         const data = await response.json();
@@ -476,9 +491,10 @@ export default function App() {
         return;
       } catch (err: any) {
         console.error("Cloudflare R2 signed URL download preparation failure:", err);
-        setToastMessage("Unable to prepare secure PDF link. Please try again.");
+        const displayErr = err.message || "Unable to prepare secure PDF link. Please try again.";
+        setToastMessage(displayErr);
         setTimeout(() => setToastMessage(""), 5000);
-        throw err;
+        return;
       }
     }
 

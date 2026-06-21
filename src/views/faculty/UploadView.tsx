@@ -3,6 +3,7 @@ import { UploadCloud, File, AlertCircle, Sparkles, CheckCircle, Loader2 } from "
 import { Material, FacultyProfile, ActiveScreen } from "../../types";
 import { DEPARTMENTS } from "../../mockData";
 import { supabase } from "../../lib/supabaseClient";
+import { auth } from "../../firebase/firebaseConfig";
 
 interface UploadViewProps {
   user: FacultyProfile;
@@ -181,14 +182,28 @@ export const UploadView: React.FC<UploadViewProps> = ({
       formData.append("materialId", materialId);
 
       // 3. Post to backend
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) {
+        throw new Error("Please log in again before uploading materials.");
+      }
+
       const response = await fetch("/api/r2/material-upload", {
         method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        },
         body: formData,
       });
 
       const contentType = response.headers.get("content-type") || "";
 
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Your session expired. Please log in again.");
+        }
+        if (response.status === 403) {
+          throw new Error("Only active faculty or admin users can upload materials.");
+        }
         if (contentType.includes("application/json")) {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.error || errorData.message || `Server responded with status ${response.status}`);
@@ -236,6 +251,9 @@ export const UploadView: React.FC<UploadViewProps> = ({
           bucketName: r2Data.bucketName || "mvgr-materials-pdfs",
           subject: subject.trim() === "" ? "General" : subject.trim(),
           unit: uploadType === "question_paper" ? "General" : (unit.trim() === "" ? "General" : unit.trim()),
+          uploadedBy: r2Data.uploadedBy || r2Data.uploadedById,
+          uploadedByName: r2Data.uploadedByName,
+          uploadedById: r2Data.uploadedById,
         } as any);
       } catch (firestoreErr: any) {
         console.error("Firestore linkage error after R2 upload:", firestoreErr);

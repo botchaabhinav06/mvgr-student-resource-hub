@@ -10,4 +10,5 @@ coverage/
 *.key
 serviceAccountKey.json
 firebase-adminsdk*.json
+.next/
 
