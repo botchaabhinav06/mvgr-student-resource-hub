@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { UploadCloud, CheckCircle, AlertCircle, Loader2, Info, ArrowLeft, FileText, Server } from "lucide-react";
+import { apiUrl } from "../lib/apiBase";
 
 interface UploadResponse {
   ok: boolean;
@@ -93,7 +94,7 @@ export function R2TestView() {
     formData.append("file", selectedFile);
 
     try {
-      const response = await fetch("/api/r2/test-upload", {
+      const response = await fetch(apiUrl("/api/r2/test-upload"), {
         method: "POST",
         body: formData,
       });
@@ -349,7 +350,7 @@ export function R2TestView() {
                   setHealthLoading(true);
                   setHealthResponse(null);
                   try {
-                    const healthResp = await fetch("/api/r2/health");
+                    const healthResp = await fetch(apiUrl("/api/r2/health"));
                     const healthData = await healthResp.json();
                     setHealthResponse(healthData);
                   } catch (hErr: any) {
@@ -407,7 +408,7 @@ export function R2TestView() {
                     setDeleteLoading(true);
                     setDeleteResponse(null);
                     try {
-                      const res = await fetch("/api/r2/delete-object", {
+                      const res = await fetch(apiUrl("/api/r2/delete-object"), {
                         method: "POST",
                         headers: {
                           "Content-Type": "application/json"

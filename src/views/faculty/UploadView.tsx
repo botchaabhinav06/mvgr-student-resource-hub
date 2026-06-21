@@ -4,6 +4,7 @@ import { Material, FacultyProfile, ActiveScreen } from "../../types";
 import { DEPARTMENTS } from "../../mockData";
 import { supabase } from "../../lib/supabaseClient";
 import { auth } from "../../firebase/firebaseConfig";
+import { apiUrl } from "../../lib/apiBase";
 
 interface UploadViewProps {
   user: FacultyProfile;
@@ -153,7 +154,7 @@ export const UploadView: React.FC<UploadViewProps> = ({
     try {
       // Pre-upload Health Check
       try {
-        const healthRes = await fetch("/api/r2/health");
+        const healthRes = await fetch(apiUrl("/api/r2/health"));
         const healthCt = healthRes.headers.get("content-type") || "";
         if (!healthRes.ok || !healthCt.includes("application/json")) {
           throw new Error("R2 backend health check failed");
@@ -187,7 +188,7 @@ export const UploadView: React.FC<UploadViewProps> = ({
         throw new Error("Please log in again before uploading materials.");
       }
 
-      const response = await fetch("/api/r2/material-upload", {
+      const response = await fetch(apiUrl("/api/r2/material-upload"), {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { X, Download, AlertCircle, ExternalLink, FileText, Loader2 } from "lucide-react";
 import { Material } from "../types";
 import { auth } from "../firebase/firebaseConfig";
+import { apiUrl } from "../lib/apiBase";
 
 interface PDFPreviewModalProps {
   material: Material | null;
@@ -61,7 +62,7 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
             throw new Error(expiredMsg);
           }
 
-          const response = await fetch("/api/r2/signed-url", {
+          const response = await fetch(apiUrl("/api/r2/signed-url"), {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -81,6 +82,8 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
               errMsg = "Your session expired. Please log in again.";
             } else if (response.status === 403) {
               errMsg = "You are not authorized to access this material.";
+            } else if (response.status === 404) {
+              errMsg = "Backend API route not found. Check VITE_API_BASE_URL or backend deployment.";
             } else {
               const errData = await response.json().catch(() => ({}));
               errMsg = errData.error || errData.message || errMsg;

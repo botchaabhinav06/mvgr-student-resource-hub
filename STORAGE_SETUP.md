@@ -75,3 +75,32 @@ An assembly-level developer sandbox has been built to test uploads and verify en
 
 - **Purpose**: Provides diagnostics for bucket connectivity and endpoint state checking.
 - **Constraints**: Contains explicit warnings that it is a developer-only testbed and does not log references inside Firestore. It remains fully hidden from production navbar and dashboard routing blocks.
+
+---
+
+## 🚀 Decoupled Production Deployment (Vercel Integration)
+
+When deploying the frontend to Vercel and the backend to a separate service (such as Cloud Run), you must configure decoupled API routing so that frontend requests successfully reach your server instead of 404ing on Vercel's same-origin route.
+
+### 1. Frontend Configuration
+Add the `VITE_API_BASE_URL` environment variable on the Vercel dashboard:
+- **Key**: `VITE_API_BASE_URL`
+- **Value**: `https://your-express-backend.com` (no trailing slash)
+
+### 2. Backend CORS & Environment Configuration
+The backend Express server must accept cross-origin requests from your Vercel frontend. Define `FRONTEND_URL` on your backend hosting platform:
+- **Key**: `FRONTEND_URL`
+- **Value**: `https://your-vercel-app.vercel.app`
+
+### 3. Backend Environment Checklist
+Ensure the backend server has the following variables set up correctly:
+- `CLOUDFLARE_R2_ACCOUNT_ID`
+- `CLOUDFLARE_R2_ACCESS_KEY_ID`
+- `CLOUDFLARE_R2_SECRET_ACCESS_KEY`
+- `CLOUDFLARE_R2_BUCKET_NAME`
+- `CLOUDFLARE_R2_ENDPOINT`
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_CLIENT_EMAIL`
+- `FIREBASE_PRIVATE_KEY`
+- `FRONTEND_URL`
+

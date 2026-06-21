@@ -20,9 +20,25 @@ async function startServer() {
 
   // CORS support
   app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
+    const origin = req.headers.origin;
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      process.env.FRONTEND_URL
+    ].filter(Boolean);
+
+    if (origin) {
+      if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+        res.header('Access-Control-Allow-Origin', origin);
+      }
+    } else {
+      res.header('Access-Control-Allow-Origin', '*');
+    }
+
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
+    res.header('Access-Control-Allow-Credentials', 'true');
+
     if (req.method === 'OPTIONS') {
       return res.sendStatus(200);
     }

@@ -11,6 +11,7 @@ import { auth, db, handleFirestoreError, OperationType } from "./firebase/fireba
 
 // Supabase integrations
 import { supabase } from "./lib/supabaseClient";
+import { apiUrl } from "./lib/apiBase";
 
 // Mock prebaked seed lists
 
@@ -429,7 +430,7 @@ export default function App() {
           throw new Error("Your session expired. Please log in again.");
         }
 
-        const response = await fetch("/api/r2/signed-url", {
+        const response = await fetch(apiUrl("/api/r2/signed-url"), {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -449,6 +450,8 @@ export default function App() {
             errMsg = "Your session expired. Please log in again.";
           } else if (response.status === 403) {
             errMsg = "You are not authorized to access this material.";
+          } else if (response.status === 404) {
+            errMsg = "Backend API route not found. Check VITE_API_BASE_URL or backend deployment.";
           } else {
             const errData = await response.json().catch(() => ({}));
             errMsg = errData.error || errData.message || errMsg;
@@ -684,7 +687,7 @@ export default function App() {
           }
 
           // 3. Call POST /api/r2/delete-object
-          const response = await fetch("/api/r2/delete-object", {
+          const response = await fetch(apiUrl("/api/r2/delete-object"), {
             method: "POST",
             headers: {
               "Content-Type": "application/json"
