@@ -271,6 +271,34 @@ router.post('/material-upload', verifyFirebaseToken, loadUserProfile, (req, res,
   }
 });
 
+function normalizeDepartment(val) {
+  if (!val) return "";
+  return String(val).toLowerCase().trim()
+    .replace(/\s+department$/i, "")
+    .replace(/^information technology$/i, "it")
+    .replace(/^computer science and engineering$/i, "cse")
+    .replace(/^computer science$/i, "cse")
+    .trim();
+}
+
+function normalizeYear(val) {
+  if (!val) return "";
+  const s = String(val).toLowerCase();
+  const match = s.match(/\d+/);
+  return match ? match[0] : s.replace(/[^0-9]/g, "");
+}
+
+function normalizeSemester(val) {
+  if (!val) return "";
+  let s = String(val).toLowerCase();
+  if (s.includes("iv")) return "4";
+  if (s.includes("iii")) return "3";
+  if (s.includes("ii")) return "2";
+  if (s.includes("i")) return "1";
+  const match = s.match(/\d+/);
+  return match ? match[0] : s.replace(/[^0-9]/g, "");
+}
+
 // 4. POST /api/r2/signed-url
 router.post('/signed-url', verifyFirebaseToken, loadUserProfile, async (req, res) => {
   try {
@@ -375,38 +403,48 @@ router.post('/signed-url', verifyFirebaseToken, loadUserProfile, async (req, res
     // Role-based Access rules
     const profile = req.userProfile || {};
     const userRole = profile.role;
-    const userDept = String(profile.department || "").trim().toLowerCase();
-    const userYear = String(profile.year || "").trim();
-    const userSem = String(profile.semester || "").trim();
+    
+    // Normalization
+    const nMatDept = normalizeDepartment(material.department);
+    const nMatYear = normalizeYear(material.year);
+    const nMatSem = normalizeSemester(material.semester);
+    
+    const nUserDept = normalizeDepartment(profile.department);
+    const nUserYear = normalizeYear(profile.year);
+    const nUserSem = normalizeSemester(profile.semester);
+
+    let authorized = false;
+    let reason = "Access denied";
 
     if (userRole === "admin") {
-      // Access granted
+      authorized = true;
     } else if (userRole === "faculty") {
-      const matDept = String(material.department || "").trim().toLowerCase();
       const matUploadedById = String(material.uploadedById || "").trim();
       const currentUid = String(req.user.uid || "").trim();
 
       const isOwner = matUploadedById && matUploadedById === currentUid;
-      const isSameDept = matDept && matDept === userDept;
+      const isSameDept = nMatDept && nMatDept === nUserDept;
 
-      if (!isOwner && !isSameDept) {
-        return res.status(403).json({
-          ok: false,
-          message: "You are not authorized to access this material"
-        });
+      if (isOwner || isSameDept) {
+        authorized = true;
+      } else {
+        reason = "Faculty department mismatch and not owner";
       }
     } else if (userRole === "student") {
-      const matDept = String(material.department || "").trim().toLowerCase();
-      const matYear = String(material.year || "").trim();
-      const matSem = String(material.semester || "").trim();
-
-      if (matDept !== userDept || matYear !== userYear || matSem !== userSem) {
-        return res.status(403).json({
-          ok: false,
-          message: "You are not authorized to access this material"
-        });
+      if (nMatDept === nUserDept && nMatYear === nUserYear && nMatSem === nUserSem) {
+        authorized = true;
+      } else {
+        reason = "Student department/year/semester mismatch";
       }
-    } else {
+    }
+
+    if (!authorized) {
+      console.warn('[DEBUG SIGNED-URL] Access Denied:', {
+        reason,
+        userRole,
+        material: { dept: nMatDept, year: nMatYear, sem: nMatSem },
+        user: { dept: nUserDept, year: nUserYear, sem: nUserSem }
+      });
       return res.status(403).json({
         ok: false,
         message: "You are not authorized to access this material"
