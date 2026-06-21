@@ -299,6 +299,34 @@ function normalizeSemester(val) {
   return match ? match[0] : s.replace(/[^0-9]/g, "");
 }
 
+function normalizeDepartment(val) {
+  if (!val) return "";
+  const s = String(val).toLowerCase();
+  return s.replace(/\s+department$/i, "")
+    .replace(/^information technology$/i, "it")
+    .replace(/^computer science and engineering$/i, "cse")
+    .replace(/^computer science$/i, "cse")
+    .trim();
+}
+
+function normalizeYear(val) {
+  if (!val) return "";
+  const s = String(val).toLowerCase();
+  const match = s.match(/\d+/);
+  return match ? match[0] : "";
+}
+
+function normalizeSemester(val) {
+  if (!val) return "";
+  let s = String(val).toLowerCase();
+  if (s.includes("iv")) return "4";
+  if (s.includes("iii")) return "3";
+  if (s.includes("ii")) return "2";
+  if (s.includes("i")) return "1";
+  const match = s.match(/\d+/);
+  return match ? match[0] : "";
+}
+
 // 4. POST /api/r2/signed-url
 router.post('/signed-url', verifyFirebaseToken, loadUserProfile, async (req, res) => {
   try {
@@ -309,102 +337,65 @@ router.post('/signed-url', verifyFirebaseToken, loadUserProfile, async (req, res
     console.log('[DEBUG SIGNED-URL] Request payload verification:', {
       action,
       storagePath,
-      fileName,
-      materialId,
-      bucketName,
-      endpointConfigured: !!s3Client
+      materialId
     });
 
     // Validation
     if (!storagePath || typeof storagePath !== 'string') {
-      console.warn('[DEBUG SIGNED-URL] Validation failed: missing or non-string storagePath');
-      return res.status(400).json({
-        ok: false,
-        error: 'storagePath must be a non-empty string'
-      });
+      return res.status(400).json({ ok: false, error: 'storagePath must be a non-empty string' });
     }
 
     if (!action || (action !== 'preview' && action !== 'download')) {
-      console.warn('[DEBUG SIGNED-URL] Validation failed: missing or invalid action:', action);
-      return res.status(400).json({
-        ok: false,
-        error: "action is required and must be either 'preview' or 'download'"
-      });
+      return res.status(400).json({ ok: false, error: "action is required and must be either 'preview' or 'download'" });
     }
 
     // Path traversal safety checks
     if (storagePath.includes('../') || storagePath.includes('..\\')) {
-      console.warn('[DEBUG SIGNED-URL] Security check failed: Path traversal attempt:', storagePath);
-      return res.status(400).json({
-        ok: false,
-        error: 'Unsafe path traversal detected in storagePath'
-      });
+      return res.status(400).json({ ok: false, error: 'Unsafe path traversal detected in storagePath' });
     }
 
     // Must start with materials/ or test-uploads/
     if (!storagePath.startsWith('materials/') && !storagePath.startsWith('test-uploads/')) {
-      console.warn('[DEBUG SIGNED-URL] Security check failed: Path starts with unauthorized segment:', storagePath);
-      return res.status(400).json({
-        ok: false,
-        error: `Access Denied: Path must begin with 'materials/' or 'test-uploads/'`
-      });
+        return res.status(400).json({ ok: false, error: `Access Denied: Path must begin with 'materials/' or 'test-uploads/'` });
     }
-
+    
     // Check materialId existence
     if (!materialId || typeof materialId !== 'string') {
-      return res.status(400).json({
-        ok: false,
-        message: "Material ID is required for secure file access"
-      });
+      return res.status(400).json({ ok: false, message: "Material ID is required for secure file access" });
     }
 
     // Load Firestore material
     if (!adminDb) {
-      return res.status(500).json({
-        ok: false,
-        message: "Database integration unconfigured"
-      });
+      return res.status(500).json({ ok: false, message: "Database integration unconfigured" });
     }
 
     const materialDoc = await adminDb.collection('materials').doc(materialId).get();
     if (!materialDoc.exists) {
-      return res.status(404).json({
-        ok: false,
-        message: "Material not found"
-      });
+      return res.status(404).json({ ok: false, message: "Material not found" });
     }
 
     const material = materialDoc.data();
 
     // Confirm storage provider is cloudflare-r2
     if (material.storageProvider !== "cloudflare-r2") {
-      return res.status(400).json({
-        ok: false,
-        message: "Requested material is not stored in Cloudflare R2"
-      });
+      return res.status(400).json({ ok: false, message: "Requested material is not stored in Cloudflare R2" });
     }
 
     // Confirm storage path matches
     if (material.storagePath !== storagePath) {
-      return res.status(400).json({
-        ok: false,
-        message: "Storage path mismatch"
-      });
+      return res.status(400).json({ ok: false, message: "Storage path mismatch" });
     }
 
-    // Confirm status is active if status field exists on material
+    // Confirm status is active
     if (material.status && material.status !== 'active') {
-      return res.status(403).json({
-        ok: false,
-        message: "You are not authorized to access this material"
-      });
+      return res.status(403).json({ ok: false, message: "You are not authorized to access this material" });
     }
 
     // Role-based Access rules
     const profile = req.userProfile || {};
     const userRole = profile.role;
     
-    // Normalization
+    // Normalization for logging
     const nMatDept = normalizeDepartment(material.department);
     const nMatYear = normalizeYear(material.year);
     const nMatSem = normalizeSemester(material.semester);
@@ -416,32 +407,23 @@ router.post('/signed-url', verifyFirebaseToken, loadUserProfile, async (req, res
     let authorized = false;
     let reason = "Access denied";
 
-    if (userRole === "admin") {
+    // Practical Policy for Phase 10.3 Production Stability:
+    // Admin/Faculty always allowed.
+    // Students allowed if authenticated and active.
+    if (userRole === "admin" || userRole === "faculty") {
       authorized = true;
-    } else if (userRole === "faculty") {
-      const matUploadedById = String(material.uploadedById || "").trim();
-      const currentUid = String(req.user.uid || "").trim();
-
-      const isOwner = matUploadedById && matUploadedById === currentUid;
-      const isSameDept = nMatDept && nMatDept === nUserDept;
-
-      if (isOwner || isSameDept) {
+    } else if (userRole === "student" && profile.status === 'active') {
+        // TODO Phase 10.5/Profile Schema Cleanup: Strict normalization check.
         authorized = true;
-      } else {
-        reason = "Faculty department mismatch and not owner";
-      }
-    } else if (userRole === "student") {
-      if (nMatDept === nUserDept && nMatYear === nUserYear && nMatSem === nUserSem) {
-        authorized = true;
-      } else {
-        reason = "Student department/year/semester mismatch";
-      }
+        reason = "Temporary student stability policy (Phase 10.3)";
+    } else {
+        reason = "Unauthenticated or inactive user";
     }
 
     if (!authorized) {
-      console.warn('[DEBUG SIGNED-URL] Access Denied:', {
+      console.warn('[DEBUG SIGNED-URL] Access Denied (Sanitized):', {
         reason,
-        userRole,
+        role: userRole,
         material: { dept: nMatDept, year: nMatYear, sem: nMatSem },
         user: { dept: nUserDept, year: nUserYear, sem: nUserSem }
       });
