@@ -1,6 +1,7 @@
 
 import express from 'express';
-import { adminDb, admin } from '../firebaseAdmin.js';
+import { adminDb } from '../firebaseAdmin.js';
+import { FieldValue } from 'firebase-admin/firestore';
 import { verifyFirebaseToken } from '../middleware/verifyFirebaseToken.js';
 import { loadUserProfile } from '../middleware/loadUserProfile.js';
 import { normalizeDepartment, normalizeYear, normalizeSemester, parseR2StoragePath } from '../utils/normalization.js';
@@ -141,7 +142,7 @@ router.post('/apply', verifyFirebaseToken, loadUserProfile, async (req, res) => 
                 norm_year: normalizeYear(data.year),
                 norm_semester: normalizeSemester(data.semester),
                 normalizationStatus: "normalized",
-                normalizedAt: admin.firestore.FieldValue.serverTimestamp(),
+                normalizedAt: FieldValue.serverTimestamp(),
                 normalizationVersion: "10.5C"
             };
             if (!data.original_department) update.original_department = data.department;
@@ -160,7 +161,7 @@ router.post('/apply', verifyFirebaseToken, loadUserProfile, async (req, res) => 
                 norm_year: normalizeYear(data.year),
                 norm_semester: normalizeSemester(data.semester),
                 normalizationStatus: "normalized",
-                normalizedAt: admin.firestore.FieldValue.serverTimestamp(),
+                normalizedAt: FieldValue.serverTimestamp(),
                 normalizationVersion: "10.5C"
             };
             if (!data.original_department) update.original_department = data.department;
