@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import r2Routes from './routes/r2Routes.js';
+import adminNormalizationRoutes from './routes/adminNormalizationRoutes.js';
 import { isConfigured } from './firebaseAdmin.js';
 
 const PORT = 3000;
@@ -47,6 +48,9 @@ async function startServer() {
 
   // Mount Cloudflare R2 API routes
   app.use('/api/r2', r2Routes);
+
+  // Mount Admin Normalization routes
+  app.use('/api/admin/normalization', adminNormalizationRoutes);
 
   // Safe root route check
   app.get('/', (req, res) => {
