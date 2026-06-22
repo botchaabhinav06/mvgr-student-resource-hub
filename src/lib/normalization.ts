@@ -12,7 +12,7 @@ export const normalizeDepartment = (value: unknown): string | null => {
     if (v.includes('eee') || v.includes('electrical and electronics')) return 'eee';
     if (v.includes('mech') || v.includes('mechanical')) return 'mech';
     if (v.includes('civil')) return 'civil';
-    if (v.includes('chem') || v.includes('chemical')) return 'chem';
+    if (v.includes('chem') || v.includes('chemical') || v.includes('chemical engineering')) return 'chem';
     return null;
 };
 

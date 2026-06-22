@@ -692,10 +692,13 @@ export default function App() {
           }
 
           // 3. Call POST /api/r2/delete-object
+          const idToken = await auth.currentUser?.getIdToken();
+          
           const response = await fetch(apiUrl("/api/r2/delete-object"), {
             method: "POST",
             headers: {
-              "Content-Type": "application/json"
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${idToken}`
             },
             body: JSON.stringify({
               storagePath: item.storagePath

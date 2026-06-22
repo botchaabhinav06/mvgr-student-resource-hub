@@ -1,20 +1,17 @@
 import { StudentProfile, FacultyProfile, Material, IssueReport } from "./types";
 
 export const DEPARTMENTS = [
-  "CSE",
   "IT",
+  "CSE",
+  "CSM",
+  "CSD",
+  "CIC",
+  "CSIT",
   "ECE",
   "EEE",
   "MECH",
   "CIVIL",
-  "CHEMICAL",
-  "CHEM",
-  "CSD",
-  "CSM",
-  "CSIC",
-  "CIC",
-  "CSIT",
-  "CSE (AI & ML)"
+  "CHEM"
 ] as const;
 
 export const MATERIAL_CATEGORIES = [

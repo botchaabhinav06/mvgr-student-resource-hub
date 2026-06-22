@@ -183,7 +183,7 @@ export const ManageView: React.FC<ManageViewProps> = ({
         <div className="flex gap-2">
             <select value={filterDept} onChange={(e) => setFilterDept(e.target.value)} className="px-2 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300 cursor-pointer">
                 <option value="all">All Depts</option>
-                {['it', 'cse', 'ece', 'eee', 'mech', 'civil'].map(d => <option key={d} value={d}>{d.toUpperCase()}</option>)}
+                {DEPARTMENTS.map(d => <option key={d} value={d.toLowerCase()}>{d} Department</option>)}
             </select>
             <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="px-2 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300 cursor-pointer">
                 <option value="all">All Years</option>

@@ -465,9 +465,21 @@ router.post('/signed-url', verifyFirebaseToken, loadUserProfile, async (req, res
 });
 
 // 3. POST /api/r2/delete-object
-router.post('/delete-object', async (req, res) => {
+router.post('/delete-object', verifyFirebaseToken, loadUserProfile, async (req, res) => {
   try {
     validateR2Env();
+
+    // ROLE CHECK: Allow delete only if req.userProfile.role is "admin" or "faculty" and status is "active".
+    const profile = req.userProfile || {};
+    const role = profile.role;
+    const status = profile.status || profile.accountStatus || "active";
+
+    if ((role !== 'admin' && role !== 'faculty') || status !== "active") {
+      return res.status(403).json({
+        ok: false,
+        message: "Only active faculty or admin users can delete materials."
+      });
+    }
 
     const { storagePath } = req.body;
 
