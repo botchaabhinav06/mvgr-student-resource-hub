@@ -633,6 +633,11 @@ export default function App() {
       updatedAt: now,
       subject: newMatData.subject || "General",
       unit: newMatData.unit || "General",
+      norm_department: newMatData.norm_department,
+      norm_year: newMatData.norm_year,
+      norm_semester: newMatData.norm_semester,
+      normalizationStatus: newMatData.normalizationStatus,
+      normalizationVersion: newMatData.normalizationVersion,
     };
 
     try {
