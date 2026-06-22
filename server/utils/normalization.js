@@ -4,10 +4,15 @@ export function normalizeDepartment(val) {
   const s = String(val).toLowerCase().trim();
   if (/(information\s+technology|it\s+department|it)/.test(s)) return 'it';
   if (/(computer\s+science(and\s+engineering)?|cse|cs)/.test(s)) return 'cse';
+  if (/(computer\s+science\s+and\s+multimedia|csm)/.test(s)) return 'csm';
+  if (/(computer\s+science\s+and\s+design|csd)/.test(s)) return 'csd';
+  if (/(computer\s+science\s+and\s+information\s+technology|csit)/.test(s)) return 'csit';
+  if (/(computer\s+internet\s+technology|cic)/.test(s)) return 'cic';
   if (/(electronics\s+and\s+communication|ece)/.test(s)) return 'ece';
   if (/(electrical\s+and\s+electronics|eee)/.test(s)) return 'eee';
   if (/(mechanical|mech)/.test(s)) return 'mech';
   if (/(civil)/.test(s)) return 'civil';
+  if (/(chemical|chem)/.test(s)) return 'chem';
   return null;
 }
 

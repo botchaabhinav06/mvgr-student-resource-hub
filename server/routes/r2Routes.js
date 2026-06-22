@@ -7,6 +7,7 @@ import { s3Client, bucketName, validateR2Env } from '../r2Client.js';
 import { verifyFirebaseToken } from '../middleware/verifyFirebaseToken.js';
 import { loadUserProfile } from '../middleware/loadUserProfile.js';
 import { adminDb } from '../firebaseAdmin.js';
+import { normalizeDepartment as utilsNormalizeDepartment, normalizeYear as utilsNormalizeYear, normalizeSemester as utilsNormalizeSemester } from '../utils/normalization.js';
 
 const router = express.Router();
 
@@ -373,7 +374,7 @@ router.post('/signed-url', verifyFirebaseToken, loadUserProfile, async (req, res
     }
 
     // Confirm status is active
-    if (material.status && material.status !== 'active') {
+    if (material.status !== 'active') {
       return res.status(403).json({ ok: false, message: "You are not authorized to access this material" });
     }
 
@@ -381,37 +382,59 @@ router.post('/signed-url', verifyFirebaseToken, loadUserProfile, async (req, res
     const profile = req.userProfile || {};
     const userRole = profile.role;
     
-    // Normalization for logging
-    const nMatDept = normalizeDepartment(material.department);
-    const nMatYear = normalizeYear(material.year);
-    const nMatSem = normalizeSemester(material.semester);
-    
-    const nUserDept = normalizeDepartment(profile.department);
-    const nUserYear = normalizeYear(profile.year);
-    const nUserSem = normalizeSemester(profile.semester);
+    // Helpers to get effective value
+    const getEffectiveDepartment = (record) => {
+      if (record.norm_department && typeof record.norm_department === 'string' && record.norm_department.trim() !== '') {
+        return record.norm_department.toLowerCase().trim();
+      }
+      return utilsNormalizeDepartment(record.department);
+    };
+
+    const getEffectiveSemester = (record) => {
+      if (record.norm_semester !== undefined && record.norm_semester !== null && String(record.norm_semester).trim() !== '') {
+        return String(record.norm_semester).trim();
+      }
+      return utilsNormalizeSemester(record.semester);
+    };
 
     let authorized = false;
     let reason = "Access denied";
 
-    // Practical Policy for Phase 10.3 Production Stability:
-    // Admin/Faculty always allowed.
-    // Students allowed if authenticated and active.
-    if (userRole === "admin" || userRole === "faculty") {
+    // Access Policy
+    if ((userRole === "admin" || userRole === "faculty") && profile.status === 'active') {
       authorized = true;
     } else if (userRole === "student" && profile.status === 'active') {
-        // TODO Phase 10.5/Profile Schema Cleanup: Strict normalization check.
+      const studentDept = getEffectiveDepartment(profile);
+      const materialDept = getEffectiveDepartment(material);
+
+      const studentSem = Number(getEffectiveSemester(profile));
+      const materialSem = Number(getEffectiveSemester(material));
+
+      const studentAllowed =
+        Boolean(studentDept) &&
+        Boolean(materialDept) &&
+        studentDept === materialDept &&
+        Number.isFinite(studentSem) &&
+        Number.isFinite(materialSem) &&
+        studentSem >= 1 &&
+        studentSem <= 8 &&
+        materialSem >= 1 &&
+        materialSem <= 8 &&
+        materialSem <= studentSem;
+
+      if (studentAllowed) {
         authorized = true;
-        reason = "Temporary student stability policy (Phase 10.3)";
+      } else {
+        reason = "Student mismatch or incomplete normalization data";
+      }
     } else {
-        reason = "Unauthenticated or inactive user";
+      reason = "Unauthenticated, inactive, or invalid role";
     }
 
     if (!authorized) {
       console.warn('[DEBUG SIGNED-URL] Access Denied (Sanitized):', {
         reason,
-        role: userRole,
-        material: { dept: nMatDept, year: nMatYear, sem: nMatSem },
-        user: { dept: nUserDept, year: nUserYear, sem: nUserSem }
+        role: userRole
       });
       return res.status(403).json({
         ok: false,
