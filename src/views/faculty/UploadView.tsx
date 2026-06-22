@@ -5,6 +5,7 @@ import { DEPARTMENTS } from "../../mockData";
 import { supabase } from "../../lib/supabaseClient";
 import { auth } from "../../firebase/firebaseConfig";
 import { apiUrl } from "../../lib/apiBase";
+import { normalizeDepartment, normalizeYear, normalizeSemester } from "../../lib/normalization";
 
 interface UploadViewProps {
   user: FacultyProfile;
@@ -223,6 +224,15 @@ export const UploadView: React.FC<UploadViewProps> = ({
 
       const r2Data = await response.json();
 
+      // Validator
+      const normDep = normalizeDepartment(department);
+      const normYr = normalizeYear(String(year));
+      const normSem = normalizeSemester(String(semester));
+
+      if (!normDep || !normYr || !normSem) {
+        throw new Error("Invalid department/year/semester selection. Please check upload details.");
+      }
+
       // 4. Formats file size
       const formatBytes = (bytes: number) => {
         if (bytes === 0) return "0 Bytes";
@@ -243,6 +253,11 @@ export const UploadView: React.FC<UploadViewProps> = ({
           department,
           year,
           semester,
+          norm_department: normDep,
+          norm_year: normYr,
+          norm_semester: normSem,
+          normalizationStatus: "normalized",
+          normalizationVersion: "10.7B",
           fileName: r2Data.fileName || rawFile.name,
           fileSize: displaySize,
           status: "active",
