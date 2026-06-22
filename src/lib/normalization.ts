@@ -12,8 +12,8 @@ export const normalizeDepartment = (value: unknown): string | null => {
 };
 
 export const normalizeYear = (value: unknown): string | null => {
-    if (!value || typeof value !== 'string') return null;
-    const v = value.toUpperCase().trim().replace(/YEAR/g, '').trim();
+    if (value === null || value === undefined) return null;
+    const v = String(value).toUpperCase().trim().replace(/YEAR/g, '').trim();
     if (['1', 'I'].includes(v)) return '1';
     if (['2', 'II'].includes(v)) return '2';
     if (['3', 'III'].includes(v)) return '3';
@@ -22,8 +22,8 @@ export const normalizeYear = (value: unknown): string | null => {
 };
 
 export const normalizeSemester = (value: unknown): string | null => {
-    if (!value || typeof value !== 'string') return null;
-    const v = value.toUpperCase().trim().replace(/SEMESTER/g, '').replace(/SEM/g, '').trim();
+    if (value === null || value === undefined) return null;
+    const v = String(value).toUpperCase().trim().replace(/SEMESTER/g, '').replace(/SEM/g, '').trim();
     const map: Record<string, string> = {
         '1': '1', 'I': '1',
         '2': '2', 'II': '2',

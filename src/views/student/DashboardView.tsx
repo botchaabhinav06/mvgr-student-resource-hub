@@ -14,6 +14,7 @@ import {
   CheckCircle,
   TrendingUp
 } from "lucide-react";
+import { getEffectiveDepartment, getEffectiveYear, getEffectiveSemester } from "../../lib/normalization";
 import { StudentProfile, Material, IssueReport, ActiveScreen } from "../../types";
 
 interface DashboardViewProps {
@@ -34,12 +35,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   triggerPreview,
 }) => {
   // Personalization: filter materials matching student's year, sem, and department
-  const personalizedMaterials = materials.filter(
-    (m) =>
-      m.department === user.department &&
-      String(m.year) === String(user.currentYear) &&
-      String(m.semester) === String(user.currentSemester)
-  );
+  const personalizedMaterials = materials.filter((m) => {
+    const studentDept = getEffectiveDepartment({ department: user.department });
+    const studentYear = getEffectiveYear({ year: user.currentYear });
+    const studentSem = getEffectiveSemester({ semester: user.currentSemester });
+    
+    const matDept = getEffectiveDepartment(m);
+    const matYear = getEffectiveYear(m);
+    const matSem = getEffectiveSemester(m);
+
+    return (
+      m.status === "active" &&
+      studentDept === matDept &&
+      studentYear === matYear &&
+      studentSem === matSem
+    );
+  });
 
   // Student specific analytics derived dynamically
   const pendingReportsCount = reports.filter((r) => r.status === "pending").length;
