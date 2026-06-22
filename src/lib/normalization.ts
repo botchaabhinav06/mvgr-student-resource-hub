@@ -4,10 +4,15 @@ export const normalizeDepartment = (value: unknown): string | null => {
     const v = value.toLowerCase().trim();
     if (v.includes('it') || v.includes('information technology') || v.includes('csit')) return 'it';
     if (v.includes('cse') || v.includes('computer science')) return 'cse';
+    if (v.includes('csm') || v.includes('computer science and machine learning') || v.includes('aiml') || v.includes('ai ml')) return 'csm';
+    if (v.includes('csd') || v.includes('computer science and data science') || v.includes('data science')) return 'csd';
+    if (v.includes('cic')) return 'cic';
+    if (v.includes('csit')) return 'csit';
     if (v.includes('ece') || v.includes('electronics and communication')) return 'ece';
     if (v.includes('eee') || v.includes('electrical and electronics')) return 'eee';
     if (v.includes('mech') || v.includes('mechanical')) return 'mech';
     if (v.includes('civil')) return 'civil';
+    if (v.includes('chem') || v.includes('chemical')) return 'chem';
     return null;
 };
 

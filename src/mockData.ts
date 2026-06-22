@@ -8,10 +8,13 @@ export const DEPARTMENTS = [
   "MECH",
   "CIVIL",
   "CHEMICAL",
+  "CHEM",
   "CSD",
-  "CSE (AI & ML)",
+  "CSM",
+  "CSIC",
   "CIC",
-  "CSIT"
+  "CSIT",
+  "CSE (AI & ML)"
 ] as const;
 
 export const MATERIAL_CATEGORIES = [
