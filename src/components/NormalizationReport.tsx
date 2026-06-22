@@ -7,6 +7,7 @@ export const NormalizationReport: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [report, setReport] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
+    const [applying, setApplying] = useState(false);
 
     const runDryRun = async () => {
         setLoading(true);
@@ -19,9 +20,7 @@ export const NormalizationReport: React.FC = () => {
             if (!token) throw new Error("No authentication token found.");
 
             const response = await fetch(apiUrl("/api/admin/normalization/dry-run"), {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                headers: { 'Authorization': `Bearer ${token}` }
             });
 
             const data = await response.json();
@@ -31,6 +30,38 @@ export const NormalizationReport: React.FC = () => {
             setError(err.message);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const runApply = async () => {
+        if (!confirm("Apply normalization now? This writes additive normalized fields to Firestore but does not delete original fields.")) return;
+        
+        setApplying(true);
+        setError(null);
+
+        try {
+            const auth = getAuth();
+            const token = await auth.currentUser?.getIdToken();
+            if (!token) throw new Error("No authentication token found.");
+
+            const response = await fetch(apiUrl("/api/admin/normalization/apply"), {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ confirm: true })
+            });
+
+            const data = await response.json();
+            if (!data.ok) throw new Error(data.message || "Failed to apply migration.");
+            
+            // Re-run dry run to show updated status
+            await runDryRun();
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setApplying(false);
         }
     };
 
@@ -74,11 +105,19 @@ export const NormalizationReport: React.FC = () => {
                         <div>Materials Need Review: {report.summary.materialsNeedReview}</div>
                     </div>
 
-                    <div className="text-xs text-slate-500 italic">
-                        This is a dry-run report only. No Firestore documents are modified from this screen.
-                    </div>
+                    {report.summary.usersNeedReview === 0 && report.summary.materialsNeedReview === 0 && (
+                        <button
+                            onClick={runApply}
+                            disabled={applying}
+                            className="px-4 py-2 bg-rose-500/10 text-rose-500 border border-rose-500/15 rounded-lg hover:bg-rose-500/20 transition disabled:opacity-50"
+                        >
+                            {applying ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply Normalization"}
+                        </button>
+                    )}
 
-                    {/* Tables could be added here, but keep it simple as requested for safety */}
+                    <div className="text-xs text-slate-500 italic">
+                        This is a dry-run report only unless "Apply" is triggered. No Firestore documents are modified from this screen.
+                    </div>
                 </div>
             )}
         </div>
