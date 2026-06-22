@@ -3,6 +3,7 @@ import { Search, Edit2, Trash2, Calendar, FileText, Download, X, Save, AlertTria
 import { Material, ActiveScreen } from "../../types";
 import { EmptyState } from "../../components/EmptyState";
 import { DEPARTMENTS, MATERIAL_CATEGORIES } from "../../mockData";
+import { getEffectiveDepartment, getEffectiveYear, getEffectiveSemester } from "../../lib/normalization";
 
 interface ManageViewProps {
   materials: Material[];
@@ -36,6 +37,11 @@ export const ManageView: React.FC<ManageViewProps> = ({
   const [search, setSearch] = useState("");
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
 
+  // Filter States
+  const [filterDept, setFilterDept] = useState("all");
+  const [filterYear, setFilterYear] = useState("all");
+  const [filterSem, setFilterSem] = useState("all");
+
   // Edit states
   const [editingMat, setEditingMat] = useState<Material | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -55,17 +61,25 @@ export const ManageView: React.FC<ManageViewProps> = ({
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
 
   const filtered = materials.filter(
-    (m) =>
-      ![
+    (m) => {
+      const matchCategory = ![
         "Mid Question Paper",
         "Semester Regular Question Paper",
         "Semester Supply Question Paper",
         "Model Question Paper"
-      ].includes(m.category) && (
+      ].includes(m.category);
+
+      const matchSearch =
         m.title.toLowerCase().includes(search.toLowerCase()) ||
         m.fileName.toLowerCase().includes(search.toLowerCase()) ||
-        (m.subject || "General").toLowerCase().includes(search.toLowerCase())
-      )
+        (m.subject || "General").toLowerCase().includes(search.toLowerCase());
+
+      const matchDept = filterDept === "all" || getEffectiveDepartment(m) === filterDept;
+      const matchYear = filterYear === "all" || getEffectiveYear(m) === filterYear;
+      const matchSem = filterSem === "all" || getEffectiveSemester(m) === filterSem;
+
+      return matchCategory && matchSearch && matchDept && matchYear && matchSem;
+    }
   );
 
   // Dynamic Grouping of Filtered Materials by Subject
@@ -163,6 +177,22 @@ export const ManageView: React.FC<ManageViewProps> = ({
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2 rounded-lg bg-slate-900 border border-slate-800 text-sm focus:outline-none focus:border-violet-500 text-slate-200"
           />
+        </div>
+
+        {/* Filters */}
+        <div className="flex gap-2">
+            <select value={filterDept} onChange={(e) => setFilterDept(e.target.value)} className="px-2 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300 cursor-pointer">
+                <option value="all">All Depts</option>
+                {['it', 'cse', 'ece', 'eee', 'mech', 'civil'].map(d => <option key={d} value={d}>{d.toUpperCase()}</option>)}
+            </select>
+            <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="px-2 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300 cursor-pointer">
+                <option value="all">All Years</option>
+                {['1', '2', '3', '4'].map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+            <select value={filterSem} onChange={(e) => setFilterSem(e.target.value)} className="px-2 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300 cursor-pointer">
+                <option value="all">All Sems</option>
+                {['1', '2'].map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
         </div>
 
         <button
