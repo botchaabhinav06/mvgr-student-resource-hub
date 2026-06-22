@@ -1,6 +1,7 @@
 import React from "react";
-import { FolderPlus, Layers, ShieldCheck, Mail, Users, FileBarChart, Sparkles, Building2 } from "lucide-react";
+import { FolderPlus, Layers, ShieldCheck, Mail, Users, FileBarChart, Sparkles, Building2, Database } from "lucide-react";
 import { FacultyProfile, Material, IssueReport, ActiveScreen } from "../../types";
+import { NormalizationReport } from "../../components/NormalizationReport";
 
 interface DashboardViewProps {
   user: FacultyProfile;
@@ -73,6 +74,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
       </div>
+
+      {user.role === 'admin' && (
+        <div className="space-y-4">
+            <h3 className="font-display font-bold text-lg text-slate-100 dark:text-slate-200">
+                Admin Administrative Tools
+            </h3>
+            <NormalizationReport />
+        </div>
+      )}
 
       {/* Main launch pads dashboard shortcuts */}
       <div className="space-y-4">
