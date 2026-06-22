@@ -93,6 +93,27 @@ router.get('/dry-run', verifyFirebaseToken, loadUserProfile, async (req, res) =>
     }
 });
 
+function getSafeUpdate(data) {
+    const update = {
+        norm_department: normalizeDepartment(data.department),
+        norm_year: normalizeYear(data.year),
+        norm_semester: normalizeSemester(data.semester),
+        normalizationStatus: "normalized",
+        normalizedAt: FieldValue.serverTimestamp(),
+        normalizationVersion: "10.5C"
+    };
+    
+    if (data.department !== undefined && data.department !== null && data.department !== "" && !data.original_department) update.original_department = data.department;
+    if (data.year !== undefined && data.year !== null && data.year !== "" && !data.original_year) update.original_year = data.year;
+    if (data.semester !== undefined && data.semester !== null && data.semester !== "" && !data.original_semester) update.original_semester = data.semester;
+
+    const final = {};
+    for (const [k, v] of Object.entries(update)) {
+        if (v !== null && v !== undefined) final[k] = v;
+    }
+    return final;
+}
+
 router.post('/apply', verifyFirebaseToken, loadUserProfile, async (req, res) => {
     try {
         if (!isAdmin(req.userProfile)) {
@@ -137,17 +158,7 @@ router.post('/apply', verifyFirebaseToken, loadUserProfile, async (req, res) => 
 
         for (const doc of usersToUpdate) {
             const data = doc.data;
-            const update = {
-                norm_department: normalizeDepartment(data.department),
-                norm_year: normalizeYear(data.year),
-                norm_semester: normalizeSemester(data.semester),
-                normalizationStatus: "normalized",
-                normalizedAt: FieldValue.serverTimestamp(),
-                normalizationVersion: "10.5C"
-            };
-            if (!data.original_department) update.original_department = data.department;
-            if (!data.original_year) update.original_year = data.year;
-            if (!data.original_semester) update.original_semester = data.semester;
+            const update = getSafeUpdate(data);
             
             batch.update(adminDb.collection('users').doc(doc.id), update);
             ops++;
@@ -156,17 +167,7 @@ router.post('/apply', verifyFirebaseToken, loadUserProfile, async (req, res) => 
 
         for (const doc of materialsToUpdate) {
             const data = doc.data;
-            const update = {
-                norm_department: normalizeDepartment(data.department),
-                norm_year: normalizeYear(data.year),
-                norm_semester: normalizeSemester(data.semester),
-                normalizationStatus: "normalized",
-                normalizedAt: FieldValue.serverTimestamp(),
-                normalizationVersion: "10.5C"
-            };
-            if (!data.original_department) update.original_department = data.department;
-            if (!data.original_year) update.original_year = data.year;
-            if (!data.original_semester) update.original_semester = data.semester;
+            const update = getSafeUpdate(data);
             
             batch.update(adminDb.collection('materials').doc(doc.id), update);
             ops++;
