@@ -20,7 +20,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
   onSubmitReport,
 }) => {
   // Dual-tab navigation for student materials visibility sync
-  const [activeTab, setActiveTab] = useState<"current" | "accessible">("current");
+  const [activeTab, setActiveTab] = useState<"current" | "all">("current");
 
   // Query Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -66,33 +66,35 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
 
   // Resolve Student Scope with high precision
   const studentDeptNorm = getEffectiveDepartment({ department: user.department }) || "";
-  const studentSemNorm = Number(getEffectiveSemester({ semester: user.currentSemester })) || 1;
 
-  // 1. Current Semester Materials (same department, same current semester, active status)
+  // 1. Current Semester Materials (same department, same year, same current semester, active status)
   const currentSemesterMaterialsBase = studyMaterialsOnly.filter((m) => {
     const matDeptNorm = getEffectiveDepartment(m) || "";
-    const matSemNorm = Number(getEffectiveSemester(m)) || 1;
-    return m.status === "active" && matDeptNorm === studentDeptNorm && matSemNorm === studentSemNorm;
-  });
-
-  // 2. Accessible Materials (same department, material semester <= student current semester, active status)
-  const accessibleMaterialsBase = studyMaterialsOnly.filter((m) => {
-    const matDeptNorm = getEffectiveDepartment(m) || "";
-    const matSemNorm = Number(getEffectiveSemester(m)) || 1;
+    const matYearNorm = getEffectiveYear(m) || "";
+    const matSemNorm = getEffectiveSemester(m) || "";
+    const studentYearNorm = getEffectiveYear({ year: user.currentYear }) || "";
+    const studentSemNorm = getEffectiveSemester({ semester: user.currentSemester }) || "";
     return (
-      m.status === "active" &&
-      matDeptNorm === studentDeptNorm &&
-      matSemNorm <= studentSemNorm &&
-      matSemNorm >= 1 &&
-      matSemNorm <= 8
+      m.status === "active" && 
+      matDeptNorm === studentDeptNorm && 
+      matYearNorm === studentYearNorm && 
+      matSemNorm === studentSemNorm
     );
   });
 
-  // Select base materials according to activeTab
-  const baseMaterials = activeTab === "current" ? currentSemesterMaterialsBase : accessibleMaterialsBase;
+  // 2. All Materials (same department, active status, all years, all semesters)
+  const allMaterialsBase = studyMaterialsOnly.filter((m) => {
+    const matDeptNorm = getEffectiveDepartment(m) || "";
+    return m.status === "active" && matDeptNorm === studentDeptNorm;
+  });
 
-  // Enforce locked semester filter value in current semester view
-  const effectiveSelectedSem = activeTab === "current" ? String(studentSemNorm) : selectedSem;
+  // Select base materials according to activeTab
+  const baseMaterials = activeTab === "current" ? currentSemesterMaterialsBase : allMaterialsBase;
+
+  // Enforce locked filters in current semester view, allow selections in all materials view
+  const effectiveSelectedDept = activeTab === "current" ? user.department : selectedDept;
+  const effectiveSelectedYear = activeTab === "current" ? String(user.currentYear) : selectedYear;
+  const effectiveSelectedSem = activeTab === "current" ? String(user.currentSemester) : selectedSem;
 
   const filteredMaterials = baseMaterials.filter((m) => {
     const matchesSearch = 
@@ -101,11 +103,11 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
       (m.subject || "General").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (m.unit || "General").toLowerCase().includes(searchQuery.toLowerCase());
     
-    // Department Filter (always limited to student's department since base is pre-filtered, 
-    // but matchesDept is preserved if they filter by user.department specifically)
-    const matchesDept = selectedDept === "All" || m.department === selectedDept;
+    const matDeptNorm = getEffectiveDepartment(m) || "";
+    const studDeptNorm = getEffectiveDepartment({ department: effectiveSelectedDept }) || "";
+    const matchesDept = effectiveSelectedDept === "All" || matDeptNorm === studDeptNorm;
     
-    const matchesYear = selectedYear === "All" || m.year.toString() === selectedYear;
+    const matchesYear = effectiveSelectedYear === "All" || m.year.toString() === effectiveSelectedYear;
     
     const matchesSem = effectiveSelectedSem === "All" || m.semester.toString() === effectiveSelectedSem;
     
@@ -155,9 +157,11 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
 
   const departmentsToRender = ["All", user.department];
   const semestersToRender = activeTab === "current"
-    ? [String(studentSemNorm)]
-    : ["All", ...Array.from({ length: studentSemNorm }, (_, i) => String(i + 1))];
-  const years = ["All", "1", "2", "3", "4"];
+    ? [String(user.currentSemester)]
+    : ["All", "1", "2"];
+  const yearsToRender = activeTab === "current"
+    ? [String(user.currentYear)]
+    : ["All", "1", "2", "3", "4"];
   const categories = ["All", ...MATERIAL_CATEGORIES];
 
   return (
@@ -174,12 +178,12 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-2xl bg-slate-900/40 dark:bg-slate-905/60 border border-slate-705/10 dark:border-slate-800 shadow-xl">
         <div className="space-y-1">
           <h2 className="font-display font-bold text-lg md:text-xl text-slate-100">
-            {activeTab === "current" ? "Current Semester Materials" : "Accessible Materials"}
+            {activeTab === "current" ? "Current Semester Materials" : "All Materials"}
           </h2>
           <p className="text-xs text-slate-400">
             {activeTab === "current" 
               ? "Materials for your present academic semester." 
-              : "Current and previous semester materials available for your department."}
+              : "All available materials from your department."}
           </p>
         </div>
         
@@ -199,16 +203,16 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
           </button>
           <button
             onClick={() => {
-              setActiveTab("accessible");
+              setActiveTab("all");
               setSelectedSubject(null);
             }}
             className={`px-4 py-2 rounded-lg font-bold transition-all cursor-pointer ${
-              activeTab === "accessible"
+              activeTab === "all"
                 ? "bg-theme-teal-action text-white shadow-md shadow-theme-teal-action/25 scale-[1.02]"
                 : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/50"
             }`}
           >
-            Accessible Materials
+            All Materials
           </button>
         </div>
       </div>
@@ -249,12 +253,13 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
               Department
             </label>
             <select
-              value={selectedDept === "All" ? "All" : user.department}
+              value={effectiveSelectedDept === "All" ? "All" : user.department}
+              disabled={activeTab === "current"}
               onChange={(e) => {
                 setSelectedDept(e.target.value);
                 setSelectedSubject(null);
               }}
-              className="w-full px-3 py-2 rounded-lg bg-theme-input-bg dark:bg-slate-950 border border-theme-input-border dark:border-slate-800 text-sm text-slate-100 dark:text-slate-300 focus:outline-none focus:border-theme-teal-action focus:ring-1 focus:ring-theme-teal-action/30 cursor-pointer font-sans"
+              className="w-full px-3 py-2 rounded-lg bg-theme-input-bg dark:bg-slate-950 border border-theme-input-border dark:border-slate-800 text-sm text-slate-100 dark:text-slate-300 focus:outline-none focus:border-theme-teal-action focus:ring-1 focus:ring-theme-teal-action/30 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer font-sans"
             >
               {departmentsToRender.map((d) => (
                 <option key={d} value={d}>
@@ -270,14 +275,15 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
               Academic Year
             </label>
             <select
-              value={selectedYear}
+              value={effectiveSelectedYear}
+              disabled={activeTab === "current"}
               onChange={(e) => {
                 setSelectedYear(e.target.value);
                 setSelectedSubject(null);
               }}
-              className="w-full px-3 py-2 rounded-lg bg-theme-input-bg dark:bg-slate-950 border border-theme-input-border dark:border-slate-800 text-sm text-slate-100 dark:text-slate-300 focus:outline-none focus:border-theme-teal-action focus:ring-1 focus:ring-theme-teal-action/30 cursor-pointer font-sans"
+              className="w-full px-3 py-2 rounded-lg bg-theme-input-bg dark:bg-slate-950 border border-theme-input-border dark:border-slate-800 text-sm text-slate-100 dark:text-slate-300 focus:outline-none focus:border-theme-teal-action focus:ring-1 focus:ring-theme-teal-action/30 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer font-sans"
             >
-              {years.map((y) => (
+              {yearsToRender.map((y) => (
                 <option key={y} value={y}>
                   {y === "All" ? "All Years" : `Year ${y}`}
                 </option>
@@ -501,7 +507,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
           <h3 className="font-display font-medium text-base text-slate-100">
             {activeTab === "current" 
               ? "No materials available for your current semester yet." 
-              : "No accessible materials available yet."}
+              : "No materials available for your department yet."}
           </h3>
           <p className="text-xs text-slate-400 mt-2 max-w-xs">
             Try adjusting your search/filter parameters or contact your department admin if you think this is an error.

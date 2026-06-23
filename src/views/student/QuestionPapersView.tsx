@@ -57,18 +57,14 @@ export const QuestionPapersView: React.FC<QuestionPapersViewProps> = ({
   const studentDeptNorm = getEffectiveDepartment({ department: user.department }) || "";
   const studentSemNorm = Number(getEffectiveSemester({ semester: user.currentSemester })) || 1;
 
-  // Only material where category is one of the Question Paper categories AND matches backend student department & semester policy
+  // Only material where category is one of the Question Paper categories AND matches backend student department policy
   const baseQuestionPapers = materials.filter((m) => {
     const isQP = QUESTION_PAPER_CATEGORIES.includes(m.category);
     const matDeptNorm = getEffectiveDepartment(m) || "";
-    const matSemNorm = Number(getEffectiveSemester(m)) || 1;
     return (
       isQP &&
       m.status === "active" &&
-      matDeptNorm === studentDeptNorm &&
-      matSemNorm <= studentSemNorm &&
-      matSemNorm >= 1 &&
-      matSemNorm <= 8
+      matDeptNorm === studentDeptNorm
     );
   });
 
@@ -127,7 +123,7 @@ export const QuestionPapersView: React.FC<QuestionPapersViewProps> = ({
 
   const departments = ["All", user.department];
   const years = ["All", "1", "2", "3", "4"];
-  const semesters = ["All", ...Array.from({ length: studentSemNorm }, (_, i) => String(i + 1))];
+  const semesters = ["All", "1", "2"];
   const categories = ["All", ...QUESTION_PAPER_CATEGORIES];
 
   return (
@@ -424,7 +420,9 @@ export const QuestionPapersView: React.FC<QuestionPapersViewProps> = ({
         <div className="text-center py-12 p-8 rounded-2xl border border-slate-800 bg-slate-900/10">
           <FileSearch className="w-12 h-12 text-slate-600 mx-auto mb-4 animate-bounce" />
           <p className="text-sm text-slate-400 font-medium font-mono uppercase tracking-wide">
-            No question papers found for selected filters.
+            {baseQuestionPapers.length === 0 
+              ? "No question papers available for your department yet." 
+              : "No question papers found for selected filters."}
           </p>
         </div>
       )}
