@@ -193,6 +193,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
               setActiveTab("current");
               setSelectedSubject(null);
             }}
+            disabled={activeTab === "current"}
             className={`px-4 py-2 rounded-lg font-bold transition-all cursor-pointer ${
               activeTab === "current"
                 ? "bg-theme-teal-action text-white shadow-md shadow-theme-teal-action/25 scale-[1.02]"
@@ -206,6 +207,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
               setActiveTab("all");
               setSelectedSubject(null);
             }}
+            disabled={activeTab === "all"}
             className={`px-4 py-2 rounded-lg font-bold transition-all cursor-pointer ${
               activeTab === "all"
                 ? "bg-theme-teal-action text-white shadow-md shadow-theme-teal-action/25 scale-[1.02]"
