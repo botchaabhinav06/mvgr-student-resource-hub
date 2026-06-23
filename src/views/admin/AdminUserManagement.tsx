@@ -46,6 +46,13 @@ export const AdminUserManagement: React.FC = () => {
     }
   };
 
+const getUserDisplayName = (user: any) =>
+    user.name || user.displayName || user.fullName || user.facultyName || user.email || user.registerNumber || "N/A";
+  
+  const getUserEmail = (user: any) => user.email || "N/A";
+  const getUserRegNo = (user: any) => user.registerNumber || user.rollNumber || "N/A";
+  const getUserStatus = (user: any) => user.status || "N/A";
+
   if (loading) return <div className="p-8 text-center text-slate-400">Loading Users...</div>;
 
   return (
@@ -56,7 +63,10 @@ export const AdminUserManagement: React.FC = () => {
           <thead>
             <tr className="border-b border-slate-800 text-left">
               <th className="p-3">Name</th>
+              <th className="p-3">Email</th>
+              <th className="p-3">Reg. No</th>
               <th className="p-3">Role</th>
+              <th className="p-3">Status</th>
               <th className="p-3">Dept</th>
               <th className="p-3">Year</th>
               <th className="p-3">Sem</th>
@@ -66,8 +76,11 @@ export const AdminUserManagement: React.FC = () => {
           <tbody>
             {users.map(user => (
               <tr key={user.id} className="border-b border-slate-800">
-                <td className="p-3">{user.fullName || user.facultyName || "N/A"}</td>
-                <td className="p-3 uppercase text-xs font-bold">{user.role}</td>
+                <td className="p-3 font-medium">{getUserDisplayName(user)}</td>
+                <td className="p-3">{getUserEmail(user)}</td>
+                <td className="p-3">{getUserRegNo(user)}</td>
+                <td className="p-3 uppercase text-xs font-bold">{user.role || "N/A"}</td>
+                <td className="p-3 capitalize">{getUserStatus(user)}</td>
                 <td className="p-3">{user.department || "N/A"}</td>
                 <td className="p-3">{user.currentYear || user.year || "N/A"}</td>
                 <td className="p-3">{user.currentSemester || user.semester || "N/A"}</td>

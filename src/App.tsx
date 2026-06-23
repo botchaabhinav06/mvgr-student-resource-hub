@@ -306,7 +306,9 @@ export default function App() {
     const path = activeScreen;
     if (currentUser.role === "student" && !path.startsWith("STUDENT_")) {
       setActiveScreen("STUDENT_DASHBOARD");
-    } else if ((currentUser.role === "faculty" || currentUser.role === "admin") && !path.startsWith("FACULTY_")) {
+    } else if (currentUser.role === "admin" && path !== "ADMIN_USERS" && !path.startsWith("FACULTY_")) {
+      setActiveScreen("FACULTY_DASHBOARD");
+    } else if (currentUser.role === "faculty" && !path.startsWith("FACULTY_")) {
       setActiveScreen("FACULTY_DASHBOARD");
     }
   }, [currentUser, activeScreen]);
