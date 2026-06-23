@@ -407,20 +407,10 @@ router.post('/signed-url', verifyFirebaseToken, loadUserProfile, async (req, res
       const studentDept = getEffectiveDepartment(profile);
       const materialDept = getEffectiveDepartment(material);
 
-      const studentSem = Number(getEffectiveSemester(profile));
-      const materialSem = Number(getEffectiveSemester(material));
-
       const studentAllowed =
         Boolean(studentDept) &&
         Boolean(materialDept) &&
-        studentDept === materialDept &&
-        Number.isFinite(studentSem) &&
-        Number.isFinite(materialSem) &&
-        studentSem >= 1 &&
-        studentSem <= 8 &&
-        materialSem >= 1 &&
-        materialSem <= 8 &&
-        materialSem <= studentSem;
+        studentDept === materialDept;
 
       if (studentAllowed) {
         authorized = true;
