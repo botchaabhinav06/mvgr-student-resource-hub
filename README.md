@@ -1,43 +1,86 @@
 # MVGR Student Resource Hub
-
-A secure, centralized academic resource sharing platform for the **Maharaj Vijayaram Gajapathi Raj (MVGR) College of Engineering**.
+A secure full-stack academic resource hub for students, faculty, and admins with Firebase Auth, Firestore, Cloudflare R2 private PDF storage, and role-based access.
 
 ---
 
-## 🚀 Live Production
-- **Platform**: [https://mvgr-student-resource-hub.vercel.app](https://mvgr-student-resource-hub.vercel.app)
-- **Status**: Live deployed and production-ready.
+## 📸 Screenshots
+<!-- Add screenshot: Student Dashboard -->
+<!-- Add screenshot: Current Semester Materials -->
+<!-- Add screenshot: All Materials -->
+<!-- Add screenshot: Faculty Manage Materials -->
+<!-- Add screenshot: Admin User Management -->
 
 ---
 
 ## 📌 Project Overview
 The MVGR Student Resource Hub is a secure, role-authorized web platform designed to streamline the academic resource lifecycle. It replaces disorganized file sharing with a single source of truth for study materials.
 
----
+### Problem Statement
+Students faced disorganized, fragmented file sharing across various messaging platforms, leading to confusion, outdated materials, and unauthorized access to course documents.
 
-## 🎯 Key Features
-* **Role-Based Access**: Specialized views and capabilities for Students, Faculty, and Admins.
-* **Streamlined Material Management**: Efficient uploading, cataloging, and deletion processes for faculty.
-* **Safe Resource Access**: Backend-mediated secure access to PDF materials via Cloudflare R2 signed URLs.
-* **Interactive Browsing**: Department-filtered browsing, year/semester scoping, and inline PDF/download capability.
-* **Academic Integrity**: Department locking for students to prevent unauthorized cross-department access.
-* **Admin Controls**: Safe user management, profile normalization, and diagnostic tools.
+### Solution Summary
+A centralized, production-grade web portal where materials are organized by department, year, and semester. The system ensures data integrity and security through Firebase-backed role authorization and backend-proxy signed URLs for file storage.
 
 ---
 
-## 🛠️ Tech Stack & System Architecture
-* **Frontend/Backend Web**: React 19 + TypeScript (Vite/Vercel)
-* **Storage Layer**: Cloudflare R2
-* **Auth/Database**: Google Firebase (Auth & Firestore)
-* **Infrastructure**: Multi-region CDN deployment.
-
-For detailed folder structure, workflows, and security, see `SECURITY.md`, `DEPLOYMENT.md`, and `USER_GUIDE.md`.
+## 🚀 Live Demo
+- **Platform**: [https://mvgr-student-resource-hub.vercel.app](https://mvgr-student-resource-hub.vercel.app)
 
 ---
 
-## 🔮 Project Status & Roadmap
-The project is currently in a stable production state (Phase 11.4).
-- **Completed**: Auth, Material Management, Admin Tools, R2 integration, Security Hardening.
-- **Future Scope**: AI-Powered Reading Assistant, Smart Quiz generator, Analytics, and Advanced Reporting.
+## 🎯 Key Features & Role-Based Access
+### Student
+* **Personalized Dashboard**: View relevant materials based on department and current semester.
+* **Question Papers**: Organized access to previous question papers.
+* **Profile Management**: Update academic details to filter relevant resources.
 
-See `ROADMAP.md` for full details.
+### Faculty
+* **Material Upload**: Streamlined cataloging of study materials and question papers.
+* **Catalog Management**: Edit metadata, preview PDFs, and delete outdated content.
+* **Discrepancy Reporting**: Handle student-reported issues via an incident queue.
+
+### Admin
+* **User Governance**: Oversee user rosters and academic profiles.
+* **Normalization Tools**: Diagnostic tools to maintain database integrity.
+
+---
+
+## 🛠️ Architecture & Security
+### Technology Stack
+* **Frontend/Backend**: React 19, TypeScript, Express.js.
+* **Auth/Database**: Firebase Auth, Firestore.
+* **Storage**: Private Cloudflare R2 bucket.
+* **Deployment**: Vercel (FE), Render (BE).
+
+### Security Architecture
+* **Signed URLs**: Backend-proxied signed URLs protect R2 storage, preventing unauthorized access.
+* **Role-Based Access (RBAC)**: Secure Firebase Auth/Firestore implementation.
+* **Department Locking**: Students strictly limited to relevant materials.
+* **Backend-Only Secrets**: No secrets exposed in the frontend.
+
+---
+
+## 📄 Documentation & Demo
+- [Security Audit](./SECURITY.md)
+- [Deployment Guide](./DEPLOYMENT.md)
+- [User Guide](./USER_GUIDE.md)
+- [Demo Script](./DEMO_SCRIPT.md)
+- [Demo Checklist](./DEMO_CHECKLIST.md)
+
+---
+
+## 🔮 Future Roadmap (AI Integration)
+* **PDF Summarizer**: AI-powered quick summaries.
+* **Smart Quiz Generator**: Generate practice questions from materials.
+* **Chatbot Assistant**: Natural language Q&A for course materials.
+
+---
+
+## 📝 GitHub Repository Description Suggestion
+"A secure full-stack academic resource hub for students, faculty, and admins with Firebase Auth, Firestore, Cloudflare R2 private PDF storage, and role-based access."
+
+---
+
+## 🏗️ Project Status
+- **Status**: Stable Production.
+- **AI Features**: Future Scope.
