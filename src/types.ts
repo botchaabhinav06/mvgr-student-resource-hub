@@ -86,4 +86,5 @@ export type ActiveScreen =
   | "FACULTY_MANAGE"
   | "FACULTY_QUESTION_PAPERS"
   | "FACULTY_REPORTS"
-  | "FACULTY_PROFILE";
+  | "FACULTY_PROFILE"
+  | "ADMIN_USERS";

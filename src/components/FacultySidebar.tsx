@@ -1,8 +1,9 @@
 import React from "react";
 import { LayoutDashboard, UploadCloud, FolderHeart, ShieldAlert, BarChart3, UserCheck, LogOut, X, Box, BookOpen } from "lucide-react";
-import { ActiveScreen } from "../types";
+import { ActiveScreen, FacultyProfile } from "../types";
 
 interface FacultySidebarProps {
+  user: FacultyProfile;
   currentScreen: ActiveScreen;
   setScreen: (screen: ActiveScreen) => void;
   onLogoutClick: () => void;
@@ -11,6 +12,7 @@ interface FacultySidebarProps {
 }
 
 export const FacultySidebar: React.FC<FacultySidebarProps> = ({
+  user,
   currentScreen,
   setScreen,
   onLogoutClick,
@@ -48,6 +50,15 @@ export const FacultySidebar: React.FC<FacultySidebarProps> = ({
       icon: UserCheck,
       screen: "FACULTY_PROFILE" as ActiveScreen,
     },
+    ...(user.role === "admin"
+      ? [
+          {
+            label: "User Management",
+            icon: UserCheck,
+            screen: "ADMIN_USERS" as ActiveScreen,
+          },
+        ]
+      : []),
   ];
 
   const handleNav = (screen: ActiveScreen) => {

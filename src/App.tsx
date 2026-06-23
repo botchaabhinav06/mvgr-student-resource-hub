@@ -35,6 +35,7 @@ import { ManageView as FacultyManage } from "./views/faculty/ManageView";
 import { QuestionPapersView as FacultyQuestionPapers } from "./views/faculty/QuestionPapersView";
 import { ReportsView as FacultyReports } from "./views/faculty/ReportsView";
 import { ProfileView as FacultyProfileView } from "./views/faculty/ProfileView";
+import { AdminUserManagement } from "./views/admin/AdminUserManagement";
 import { R2TestView } from "./views/R2TestView";
 
 const mapFirestoreUser = (uid: string, data: any): StudentProfile | FacultyProfile => {
@@ -956,6 +957,8 @@ export default function App() {
               materialsCount={materials.filter((m) => m.uploadedBy === (currentUser as FacultyProfile).facultyId).length}
             />
           );
+        case "ADMIN_USERS":
+          return <AdminUserManagement />;
         default:
           return <p className="text-slate-400">View Not Configured</p>;
       }
@@ -1186,6 +1189,7 @@ export default function App() {
             />
           ) : (
             <FacultySidebar
+              user={currentUser as FacultyProfile}
               currentScreen={activeScreen}
               setScreen={setActiveScreen}
               onLogoutClick={() => setLogoutModalOpen(true)}
