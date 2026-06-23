@@ -37,7 +37,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     if (deleteConfirmId === id) {
       onDeleteReport(id);
       setDeleteConfirmId(null);
-      setToast("TICKET DELETED // PURGED FROM DISCREPANCY LOGS");
+      setToast("TICKET DELETED // REMOVED FROM HISTORY");
       setTimeout(() => setToast(""), 3500);
     } else {
       setDeleteConfirmId(id);
@@ -207,7 +207,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                       className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-bold border border-rose-500/25 transition cursor-pointer"
                     >
                       <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
-                      {deleteConfirmId === rep.id ? "Confirm Delete?" : "Delete Ticket"}
+                      {deleteConfirmId === rep.id ? "Are you sure you want to remove this report?" : "Remove Report"}
                     </button>
                   </div>
                 )}
@@ -223,7 +223,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                       className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-bold border border-rose-500/25 transition cursor-pointer"
                     >
                       <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
-                      {deleteConfirmId === rep.id ? "Confirm Purge?" : "Purge Record"}
+                      {deleteConfirmId === rep.id ? "Are you sure you want to remove this report?" : "Remove Report"}
                     </button>
                   </div>
                 )}
