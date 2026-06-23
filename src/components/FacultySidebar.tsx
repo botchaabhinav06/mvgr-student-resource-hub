@@ -95,7 +95,7 @@ export const FacultySidebar: React.FC<FacultySidebarProps> = ({
               />
             </div>
             <span className="font-display font-black text-sm tracking-tight text-slate-100 dark:text-white select-none whitespace-nowrap">
-              MVGR <span className="text-theme-teal-action dark:text-cyber-violet font-bold">Staff</span>
+              MVGR <span className="text-cyber-cyan font-bold">Staff</span>
             </span>
           </div>
           <button
@@ -116,14 +116,14 @@ export const FacultySidebar: React.FC<FacultySidebarProps> = ({
                 onClick={() => handleNav(item.screen)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
                   isActive
-                    ? "bg-theme-teal-action/10 dark:bg-violet-500/10 text-theme-teal-action dark:text-cyber-violet border border-theme-teal-action/15 dark:border-violet-500/20 shadow-sm"
+                    ? "bg-cyan-500/10 text-cyber-cyan border border-cyan-500/20 shadow-[0_0_15px_rgba(0,229,255,0.05)]"
                     : "text-slate-400 hover:text-slate-100 hover:bg-slate-900/50"
                 }`}
               >
-                <item.icon className={`w-4 h-4 transition-transform duration-200 ${isActive ? "text-theme-teal-action dark:text-cyber-violet scale-110" : "text-slate-400"}`} />
+                <item.icon className={`w-4 h-4 transition-transform duration-200 ${isActive ? "text-cyber-cyan scale-110" : "text-slate-400"}`} />
                 {item.label}
                 {isActive && (
-                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-theme-teal-action dark:bg-cyber-violet" />
+                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-cyber-cyan box-glow-cyan" />
                 )}
               </button>
             );

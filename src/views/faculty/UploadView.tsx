@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from "react";
 import { UploadCloud, File, AlertCircle, Sparkles, CheckCircle, Loader2 } from "lucide-react";
 import { Material, FacultyProfile, ActiveScreen } from "../../types";
 import { DEPARTMENTS } from "../../mockData";
-import { supabase } from "../../lib/supabaseClient";
 import { auth } from "../../firebase/firebaseConfig";
 import { apiUrl } from "../../lib/apiBase";
 import { normalizeDepartment, normalizeYear, normalizeSemester } from "../../lib/normalization";
@@ -261,7 +260,7 @@ export const UploadView: React.FC<UploadViewProps> = ({
           fileName: r2Data.fileName || rawFile.name,
           fileSize: displaySize,
           status: "active",
-          previewUrl: "", // Cloudflare R2 preview to be enabled in Phase 9.4
+          previewUrl: "", 
           storagePath: r2Data.storagePath,
           storageProvider: "cloudflare-r2",
           bucketName: r2Data.bucketName || "mvgr-materials-pdfs",
@@ -298,8 +297,8 @@ export const UploadView: React.FC<UploadViewProps> = ({
     <div className="space-y-6 max-w-4xl relative">
       {/* Toast popup */}
       {successToast && (
-        <div className="fixed top-20 right-6 z-50 flex items-center gap-2 p-4 rounded-xl bg-slate-900 border border-violet-400 text-xs font-mono font-bold text-cyber-violet box-glow-violet animate-bounce">
-          <CheckCircle className="w-4.5 h-4.5 text-cyber-violet" />
+        <div className="fixed top-20 right-6 z-50 flex items-center gap-2 p-4 rounded-xl bg-slate-900 border border-cyan-500/30 text-xs font-mono font-bold text-cyber-cyan box-glow-cyan animate-bounce shadow-xl">
+          <CheckCircle className="w-4.5 h-4.5 text-cyber-cyan" />
           {successToast}
         </div>
       )}
@@ -311,27 +310,27 @@ export const UploadView: React.FC<UploadViewProps> = ({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="p-6 rounded-2xl cyber-glass border border-slate-800 space-y-6">
-        <div className="flex items-center gap-2 pb-3 mb-2 border-b border-lite bg-slate-900 border-slate-800">
-          <UploadCloud className="w-5 h-5 text-cyber-violet" />
-          <h3 className="font-display font-bold text-sm text-slate-200 tracking-wide uppercase">
+      <form onSubmit={handleSubmit} className="p-6 rounded-2xl cyber-glass border border-slate-700/10 dark:border-slate-800 space-y-6 shadow-xl">
+        <div className="flex items-center gap-2 pb-3 mb-2 border-b border-slate-800 bg-transparent">
+          <UploadCloud className="w-5 h-5 text-cyber-cyan" />
+          <h3 className="font-display font-medium text-sm text-slate-100 tracking-wide uppercase">
             Document Repository Upload Form
           </h3>
         </div>
 
         {/* Dynamic Drag-and-Drop Area Component */}
         <div>
-          <label className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wide block mb-2">
+          <label className="text-[11px] font-mono font-medium text-slate-400 uppercase tracking-wider block mb-2">
             Upload PDF Document File
           </label>
           <div
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleSimulatedDrop}
             onClick={simulateDragClick}
-            className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
+            className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 ${
               simulatedFile
-                ? "bg-violet-500/5 border-violet-500/40"
-                : "border-slate-800 hover:border-violet-500/30 bg-slate-950/40"
+                ? "bg-cyan-500/5 border-cyber-cyan"
+                : "border-slate-850 dark:border-slate-800 hover:border-cyber-cyan/50 bg-slate-950/20 hover:bg-slate-950/40"
             }`}
           >
             <input
@@ -344,7 +343,7 @@ export const UploadView: React.FC<UploadViewProps> = ({
 
             {simulatedFile ? (
               <div className="space-y-2 animate-in fade-in duration-300">
-                <div className="w-12 h-12 rounded-lg bg-violet-500/15 text-cyber-violet flex items-center justify-center mx-auto border border-violet-500/20">
+                <div className="w-12 h-12 rounded-lg bg-cyan-500/10 text-cyber-cyan flex items-center justify-center mx-auto border border-cyan-500/20">
                   <File className="w-6 h-6" />
                 </div>
                 <div>
@@ -352,7 +351,7 @@ export const UploadView: React.FC<UploadViewProps> = ({
                     {simulatedFile.name}
                   </p>
                   <p className="text-xs text-slate-400 font-sans mt-0.5">
-                    Verified Attachment // Size: <span className="text-cyber-violet font-bold font-mono">{simulatedFile.size}</span>
+                    Verified Attachment // Size: <span className="text-cyber-cyan font-bold font-mono">{simulatedFile.size}</span>
                   </p>
                 </div>
                 <button
@@ -363,21 +362,21 @@ export const UploadView: React.FC<UploadViewProps> = ({
                     setRawFile(null);
                     setSimulatedFile(null);
                   }}
-                  className="px-3 py-1 rounded bg-slate-900 border border-slate-800 text-[10px] text-rose-400 hover:text-white disabled:opacity-50"
+                  className="px-3 py-1 rounded bg-slate-900 border border-slate-800 text-[10px] text-rose-450 hover:text-white disabled:opacity-50 cursor-pointer"
                 >
                   Remove file
                 </button>
               </div>
             ) : (
               <div className="space-y-3 font-sans">
-                <div className="w-12 h-12 rounded-lg bg-slate-900 text-slate-500 flex items-center justify-center mx-auto border border-slate-800">
-                  <UploadCloud className="w-6 h-6" />
+                <div className="w-12 h-12 rounded-lg bg-slate-900/50 text-slate-500 flex items-center justify-center mx-auto border border-slate-800">
+                  <UploadCloud className="w-6 h-6 text-slate-400" />
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm font-semibold text-slate-200">
                     Click to browse files or drag PDF documents here
                   </p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-450">
                     Supports high-resolution PDF study material textbooks up to 32 MB
                   </p>
                 </div>
@@ -386,19 +385,19 @@ export const UploadView: React.FC<UploadViewProps> = ({
           </div>
         </div>
 
-        {/* Meta Info Form */}
+        {/* Meta Form Fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 font-sans">
           <div className="md:col-span-2">
-            <label className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wide block mb-1.5 animate-pulse">
+            <label className="text-[11px] font-mono font-medium text-slate-400 uppercase tracking-wider block mb-2">
               Upload Type / Resource Category
             </label>
-            <div className="grid grid-cols-2 gap-3 p-1.5 rounded-xl bg-slate-950/80 border border-slate-800">
+            <div className="grid grid-cols-2 gap-2 p-1.5 rounded-xl bg-slate-950 border border-slate-700/10 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => handleUploadTypeChange("study_material")}
                 className={`py-2.5 text-xs font-mono font-bold tracking-wider uppercase rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
                   uploadType === "study_material"
-                    ? "bg-violet-600/90 text-white shadow-md shadow-violet-600/20 border border-violet-500/20"
+                    ? "bg-cyan-500/10 text-cyber-cyan border border-cyan-500/20 shadow-sm"
                     : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/50"
                 }`}
               >
@@ -409,7 +408,7 @@ export const UploadView: React.FC<UploadViewProps> = ({
                 onClick={() => handleUploadTypeChange("question_paper")}
                 className={`py-2.5 text-xs font-mono font-bold tracking-wider uppercase rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
                   uploadType === "question_paper"
-                    ? "bg-violet-600/90 text-white shadow-md shadow-violet-600/20 border border-violet-500/20"
+                    ? "bg-cyan-500/10 text-cyber-cyan border border-cyan-500/20 shadow-sm"
                     : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/50"
                 }`}
               >
@@ -419,29 +418,29 @@ export const UploadView: React.FC<UploadViewProps> = ({
           </div>
 
           <div>
-            <label className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wide block mb-1.5">
+            <label className="text-[11px] font-mono font-medium text-slate-400 uppercase tracking-wider block mb-1.5 animate-pulse">
               {uploadType === "study_material" ? "Material Title Name" : "Paper Title"}
             </label>
             <input
               type="text"
               required
               disabled={uploading}
-              placeholder={uploadType === "study_material" ? "e.g., Computer Organization Cache Memory Mapping" : "e.g., DBMS Mid 1 Regular Nov 2025"}
+              placeholder={uploadType === "study_material" ? "e.g., Computer Organization Cache Memory" : "e.g., DBMS Mid 1 Regular Nov 2025"}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700/10 dark:border-slate-800 text-sm focus:outline-none focus:border-cyber-cyan/50 text-slate-250 focus:ring-1 focus:ring-cyber-cyan/20 transition-all placeholder:text-slate-600"
             />
           </div>
 
           <div>
-            <label className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wide block mb-1.5">
+            <label className="text-[11px] font-mono font-medium text-slate-400 uppercase tracking-wider block mb-1.5">
               {uploadType === "study_material" ? "Academic Type Category" : "Paper Type"}
             </label>
             <select
               value={category}
               disabled={uploading}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-violet-500 cursor-pointer font-sans"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700/10 dark:border-slate-800 text-sm focus:outline-none focus:border-cyber-cyan/50 text-slate-300 focus:ring-1 focus:ring-cyber-cyan/20 cursor-pointer font-sans"
             >
               {(uploadType === "study_material" ? STUDY_MATERIAL_CATEGORIES : QUESTION_PAPER_CATEGORIES).map((cat) => (
                 <option key={cat} value={cat}>
@@ -452,14 +451,14 @@ export const UploadView: React.FC<UploadViewProps> = ({
           </div>
 
           <div>
-            <label className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wide block mb-1.5">
-              {uploadType === "study_material" ? "Target College Department" : "Department"}
+            <label className="text-[11px] font-mono font-medium text-slate-400 uppercase tracking-wider block mb-1.5">
+              {uploadType === "study_material" ? "Target Department" : "Department"}
             </label>
             <select
               value={department}
               disabled={uploading}
               onChange={(e) => setDepartment(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-violet-500 cursor-pointer"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700/10 dark:border-slate-800 text-sm focus:outline-none focus:border-cyber-cyan/50 text-slate-300 focus:ring-1 focus:ring-cyber-cyan/20 cursor-pointer"
             >
               {DEPARTMENTS.map((dept) => (
                 <option key={dept} value={dept}>
@@ -471,14 +470,14 @@ export const UploadView: React.FC<UploadViewProps> = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wide block mb-1.5">
+              <label className="text-[11px] font-mono font-medium text-slate-400 uppercase tracking-wider block mb-1.5">
                 {uploadType === "study_material" ? "B.Tech Year" : "Year"}
               </label>
               <select
                 value={year}
                 disabled={uploading}
                 onChange={(e) => setYear(Number(e.target.value))}
-                className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-violet-500 cursor-pointer"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700/10 dark:border-slate-800 text-sm focus:outline-none focus:border-cyber-cyan/50 text-slate-300 focus:ring-1 focus:ring-cyber-cyan/20 cursor-pointer"
               >
                 {[1, 2, 3, 4].map((yr) => (
                   <option key={yr} value={yr}>
@@ -489,14 +488,14 @@ export const UploadView: React.FC<UploadViewProps> = ({
             </div>
 
             <div>
-              <label className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wide block mb-1.5">
+              <label className="text-[11px] font-mono font-medium text-slate-400 uppercase tracking-wider block mb-1.5">
                 {uploadType === "study_material" ? "Semester term" : "Semester"}
               </label>
               <select
                 value={semester}
                 disabled={uploading}
                 onChange={(e) => setSemester(Number(e.target.value))}
-                className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-violet-500 cursor-pointer"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700/10 dark:border-slate-800 text-sm focus:outline-none focus:border-cyber-cyan/50 text-slate-300 focus:ring-1 focus:ring-cyber-cyan/20 cursor-pointer"
               >
                 <option value={1}>Semester I</option>
                 <option value={2}>Semester II</option>
@@ -505,23 +504,24 @@ export const UploadView: React.FC<UploadViewProps> = ({
           </div>
 
           <div className={uploadType === "study_material" ? "" : "md:col-span-2"}>
-            <label className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wide block mb-1.5" id="subject-name-label">
+            <label className="text-[11px] font-mono font-medium text-slate-400 uppercase tracking-wider block mb-1.5" id="subject-name-label">
               Subject Name
             </label>
             <input
               type="text"
               disabled={uploading}
+              required={uploadType === "question_paper"}
               placeholder="Enter subject name, e.g., Java Programming"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700/10 dark:border-slate-800 text-sm focus:outline-none focus:border-cyber-cyan/50 text-slate-250 focus:ring-1 focus:ring-cyber-cyan/20 transition-all placeholder:text-slate-600"
               id="subject-name-input"
             />
           </div>
 
           {uploadType === "study_material" && (
             <div>
-              <label className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wide block mb-1.5" id="unit-lesson-label">
+              <label className="text-[11px] font-mono font-medium text-slate-400 uppercase tracking-wider block mb-1.5" id="unit-lesson-label">
                 Unit / Lesson
               </label>
               <input
@@ -530,30 +530,30 @@ export const UploadView: React.FC<UploadViewProps> = ({
                 placeholder="Enter unit or lesson, e.g., Unit 1 or Lesson 2"
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700/10 dark:border-slate-800 text-sm focus:outline-none focus:border-cyber-cyan/50 text-slate-250 focus:ring-1 focus:ring-cyber-cyan/20 transition-all placeholder:text-slate-600"
                 id="unit-lesson-input"
               />
             </div>
           )}
         </div>
 
-        {/* Security / Quality Guidelines Checklist */}
-        <div className="p-4 rounded-xl bg-violet-950/10 border border-violet-500/15 space-y-2">
-          <div className="flex items-center gap-1.5 text-xs font-mono text-cyber-violet font-semibold">
+        {/* Quality Guidelines Checklist */}
+        <div className="p-4 rounded-xl bg-cyan-950/10 border border-cyan-500/15 space-y-2">
+          <div className="flex items-center gap-1.5 text-xs font-mono text-cyber-cyan font-bold">
             <Sparkles className="w-3.5 h-3.5" />
-            ACADEMIC INTEGRITY INSTRUCTIONS CHECK
+            ACADEMIC INTEGRITY REVIEW CODE
           </div>
           <p className="text-[11px] text-slate-400 leading-relaxed font-sans">
-            Please ensure uploaded documents belong strictly to registered regulatory curriculum guides or official lecture scripts. Every upload preserves an internal audit hash mapping of creator identity employee roll codes.
+            Please verify uploaded documents belong strictly to registered regulatory curriculum guides or official lecture scripts. Every upload preserves an internal audit hash mapping of creator identity employee roll codes.
           </p>
         </div>
 
-        {/* Button Submit */}
-        <div className="pt-4 border-t border-slate-800 flex justify-end">
+        {/* Submit Button */}
+        <div className="pt-4 border-t border-slate-850 flex justify-end">
           <button
             type="submit"
             disabled={uploading}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-cyber-violet text-white text-xs font-bold hover:bg-cyber-violet/85 shadow-lg shadow-violet-500/10 cursor-pointer active:scale-95 transition disabled:opacity-70 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-cyber-cyan text-slate-950 text-xs font-black hover:bg-cyber-cyan/90 transition shadow-lg shadow-cyan-500/10 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {uploading ? (
               <>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { Database, AlertCircle, CheckCircle, Loader2, Sparkles, FolderLock } from 'lucide-react';
 import { getAuth } from 'firebase/auth';
 import { apiUrl } from '../lib/apiBase';
 
@@ -66,57 +66,99 @@ export const NormalizationReport: React.FC = () => {
     };
 
     return (
-        <div className="p-6 rounded-xl cyber-glass border border-slate-700/10 dark:border-slate-800 shadow-md space-y-4">
-            <h3 className="font-display font-bold text-lg text-slate-100 dark:text-slate-200 flex items-center gap-2">
-                <Database className="w-5 h-5 text-theme-teal-action" />
-                Data Normalization Admin Tool
+        <div className="p-6 rounded-2xl cyber-glass border border-slate-700/10 dark:border-slate-800 shadow-md space-y-4 font-sans text-xs sm:text-sm">
+            <h3 className="font-display font-bold text-sm text-slate-100 flex items-center gap-2 uppercase tracking-wide">
+                <Database className="w-4.5 h-4.5 text-cyber-cyan" />
+                Data Normalization Command Tool
             </h3>
             
             {!report && (
                 <button
                     onClick={runDryRun}
                     disabled={loading}
-                    className="px-4 py-2 bg-theme-teal-action/10 dark:bg-violet-500/10 text-theme-teal-action dark:text-cyber-violet border border-theme-teal-action/15 dark:border-violet-500/10 rounded-lg hover:bg-theme-teal-action/20 transition disabled:opacity-50"
+                    className="px-5 py-2.5 bg-cyan-500/10 hover:bg-cyan-500/15 text-cyber-cyan border border-cyan-500/20 rounded-xl transition duration-150 disabled:opacity-50 flex items-center justify-center gap-2 font-mono font-bold text-xs uppercase cursor-pointer"
                 >
-                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Run Normalization Dry-run"}
+                    {loading ? (
+                        <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            Executing Dry-Run scan...
+                        </>
+                    ) : (
+                        "Run Normalization Dry-run"
+                    )}
                 </button>
             )}
 
             {error && (
-                <div className="flex items-center gap-2 text-rose-500 text-sm">
-                    <AlertCircle className="w-4 h-4" />
-                    {error}
+                <div className="flex items-center gap-2 text-rose-450 font-mono text-xs p-3 rounded-xl bg-rose-500/5 border border-rose-500/15">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    SYSTEM EXCEPTION // {error}
                 </div>
             )}
 
             {report && (
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-emerald-500 text-sm">
-                        <CheckCircle className="w-4 h-4" />
-                        Dry-run complete. No Firestore documents were modified.
+                <div className="space-y-4 animate-in fade-in duration-200">
+                    <div className="flex items-center gap-2 text-emerald-400 font-mono font-bold text-xs">
+                        <CheckCircle className="w-4.5 h-4.5" />
+                        DRY-RUN SCAN COMPLETE // LOG ENTRY FILED
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4 text-sm text-slate-300">
-                        <div>Users Scanned: {report.summary.usersScanned}</div>
-                        <div>Materials Scanned: {report.summary.materialsScanned}</div>
-                        <div>Users Can Normalize: {report.summary.usersCanNormalize}</div>
-                        <div>Materials Can Normalize: {report.summary.materialsCanNormalize}</div>
-                        <div>Users Need Review: {report.summary.usersNeedReview}</div>
-                        <div>Materials Need Review: {report.summary.materialsNeedReview}</div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs text-slate-300 font-mono bg-slate-950/60 border border-slate-850 p-4 rounded-xl">
+                        <div className="space-y-0.5">
+                            <span className="text-slate-500 block text-[9px] uppercase">Users Scanned</span>
+                            <span className="text-sm font-bold text-slate-200">{report.summary.usersScanned}</span>
+                        </div>
+                        <div className="space-y-0.5">
+                            <span className="text-slate-500 block text-[9px] uppercase">Materials Scanned</span>
+                            <span className="text-sm font-bold text-slate-200">{report.summary.materialsScanned}</span>
+                        </div>
+                        <div className="space-y-0.5">
+                            <span className="text-slate-500 block text-[9px] uppercase">Users Normalized</span>
+                            <span className="text-sm font-bold text-slate-200">{report.summary.usersCanNormalize}</span>
+                        </div>
+                        <div className="space-y-0.5">
+                            <span className="text-slate-500 block text-[9px] uppercase">Materials Normalized</span>
+                            <span className="text-sm font-bold text-slate-200">{report.summary.materialsCanNormalize}</span>
+                        </div>
+                        <div className="space-y-0.5 font-sans">
+                            <span className="text-slate-500 block text-[9px] font-mono uppercase">Users Needs Review</span>
+                            <span className={`text-sm font-bold block ${report.summary.usersNeedReview > 0 ? "text-amber-500" : "text-emerald-500"}`}>
+                                {report.summary.usersNeedReview}
+                            </span>
+                        </div>
+                        <div className="space-y-0.5 font-sans">
+                            <span className="text-slate-500 block text-[9px] font-mono uppercase">Materials Needs Review</span>
+                            <span className={`text-sm font-bold block ${report.summary.materialsNeedReview > 0 ? "text-amber-500" : "text-emerald-500"}`}>
+                                {report.summary.materialsNeedReview}
+                            </span>
+                        </div>
                     </div>
 
                     {report.summary.usersNeedReview === 0 && report.summary.materialsNeedReview === 0 && (
-                        <button
-                            onClick={runApply}
-                            disabled={applying}
-                            className="px-4 py-2 bg-rose-500/10 text-rose-500 border border-rose-500/15 rounded-lg hover:bg-rose-500/20 transition disabled:opacity-50"
-                        >
-                            {applying ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply Normalization"}
-                        </button>
+                        <div className="space-y-3 pt-1">
+                            <div className="flex items-center gap-1.5 text-xs text-slate-400 font-sans">
+                                <Sparkles className="w-4 h-4 text-cyber-cyan" />
+                                Ready to apply normalized entries to matching database blocks.
+                            </div>
+                            <button
+                                onClick={runApply}
+                                disabled={applying}
+                                className="px-5 py-2.5 bg-rose-500/10 hover:bg-rose-500/15 text-rose-450 border border-rose-500/20 rounded-xl transition duration-150 disabled:opacity-50 flex items-center gap-2 font-mono font-bold text-xs uppercase cursor-pointer"
+                            >
+                                {applying ? (
+                                    <>
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        Applying Database migrations...
+                                    </>
+                                ) : (
+                                    "Apply Normalization"
+                                )}
+                            </button>
+                        </div>
                     )}
 
-                    <div className="text-xs text-slate-500 italic">
-                        This is a dry-run report only unless "Apply" is triggered. No Firestore documents are modified from this screen.
+                    <div className="text-[10px] text-slate-500 italic font-mono pt-1">
+                        Dry-run data generated purely from passive scanning snapshots. No writes are made until normalization commits.
                     </div>
                 </div>
             )}
