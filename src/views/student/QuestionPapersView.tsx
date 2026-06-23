@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Search, SlidersHorizontal, DownloadCloud, Eye, AlertTriangle, X, Check, FileSearch, Loader2, Folder, ArrowLeft } from "lucide-react";
 import { Material, IssueReport, StudentProfile } from "../../types";
 import { DEPARTMENTS } from "../../mockData";
+import { getEffectiveDepartment, getEffectiveSemester } from "../../lib/normalization";
 
 interface QuestionPapersViewProps {
   user: StudentProfile;
@@ -52,10 +53,24 @@ export const QuestionPapersView: React.FC<QuestionPapersViewProps> = ({
     }
   };
 
-  // Only material where category is one of the Question Paper categories
-  const baseQuestionPapers = materials.filter((m) =>
-    QUESTION_PAPER_CATEGORIES.includes(m.category)
-  );
+  // Resolve student parameters
+  const studentDeptNorm = getEffectiveDepartment({ department: user.department }) || "";
+  const studentSemNorm = Number(getEffectiveSemester({ semester: user.currentSemester })) || 1;
+
+  // Only material where category is one of the Question Paper categories AND matches backend student department & semester policy
+  const baseQuestionPapers = materials.filter((m) => {
+    const isQP = QUESTION_PAPER_CATEGORIES.includes(m.category);
+    const matDeptNorm = getEffectiveDepartment(m) || "";
+    const matSemNorm = Number(getEffectiveSemester(m)) || 1;
+    return (
+      isQP &&
+      m.status === "active" &&
+      matDeptNorm === studentDeptNorm &&
+      matSemNorm <= studentSemNorm &&
+      matSemNorm >= 1 &&
+      matSemNorm <= 8
+    );
+  });
 
   const filteredQuestionPapers = baseQuestionPapers.filter((m) => {
     const matchesSearch =
@@ -63,6 +78,7 @@ export const QuestionPapersView: React.FC<QuestionPapersViewProps> = ({
       m.fileName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (m.subject || "General").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (m.unit || "General").toLowerCase().includes(searchQuery.toLowerCase());
+    
     const matchesDept = selectedDept === "All" || m.department === selectedDept;
     const matchesYear = selectedYear === "All" || m.year.toString() === selectedYear;
     const matchesSem = selectedSem === "All" || m.semester.toString() === selectedSem;
@@ -109,9 +125,9 @@ export const QuestionPapersView: React.FC<QuestionPapersViewProps> = ({
     setTimeout(() => setToastMessage(""), 4000);
   };
 
-  const departments = ["All", ...DEPARTMENTS];
+  const departments = ["All", user.department];
   const years = ["All", "1", "2", "3", "4"];
-  const semesters = ["All", "1", "2"];
+  const semesters = ["All", ...Array.from({ length: studentSemNorm }, (_, i) => String(i + 1))];
   const categories = ["All", ...QUESTION_PAPER_CATEGORIES];
 
   return (

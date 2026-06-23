@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { Search, SlidersHorizontal, DownloadCloud, Eye, AlertTriangle, X, Check, FileSearch, Loader2, Folder, ArrowLeft } from "lucide-react";
+import { Search, SlidersHorizontal, DownloadCloud, Eye, AlertTriangle, X, Check, FileSearch, Loader2, Folder, ArrowLeft, RotateCcw } from "lucide-react";
 import { Material, IssueReport, StudentProfile } from "../../types";
-import { EmptyState } from "../../components/EmptyState";
 import { DEPARTMENTS, MATERIAL_CATEGORIES } from "../../mockData";
+import { getEffectiveDepartment, getEffectiveSemester, getEffectiveYear } from "../../lib/normalization";
 
 interface BrowseViewProps {
   user: StudentProfile;
@@ -19,6 +19,9 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
   triggerPreview,
   onSubmitReport,
 }) => {
+  // Dual-tab navigation for student materials visibility sync
+  const [activeTab, setActiveTab] = useState<"current" | "accessible">("current");
+
   // Query Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDept, setSelectedDept] = useState("All");
@@ -61,15 +64,51 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
       !["Mid Question Paper", "Semester Regular Question Paper", "Semester Supply Question Paper", "Model Question Paper"].includes(m.category)
   );
 
-  const filteredMaterials = studyMaterialsOnly.filter((m) => {
+  // Resolve Student Scope with high precision
+  const studentDeptNorm = getEffectiveDepartment({ department: user.department }) || "";
+  const studentSemNorm = Number(getEffectiveSemester({ semester: user.currentSemester })) || 1;
+
+  // 1. Current Semester Materials (same department, same current semester, active status)
+  const currentSemesterMaterialsBase = studyMaterialsOnly.filter((m) => {
+    const matDeptNorm = getEffectiveDepartment(m) || "";
+    const matSemNorm = Number(getEffectiveSemester(m)) || 1;
+    return m.status === "active" && matDeptNorm === studentDeptNorm && matSemNorm === studentSemNorm;
+  });
+
+  // 2. Accessible Materials (same department, material semester <= student current semester, active status)
+  const accessibleMaterialsBase = studyMaterialsOnly.filter((m) => {
+    const matDeptNorm = getEffectiveDepartment(m) || "";
+    const matSemNorm = Number(getEffectiveSemester(m)) || 1;
+    return (
+      m.status === "active" &&
+      matDeptNorm === studentDeptNorm &&
+      matSemNorm <= studentSemNorm &&
+      matSemNorm >= 1 &&
+      matSemNorm <= 8
+    );
+  });
+
+  // Select base materials according to activeTab
+  const baseMaterials = activeTab === "current" ? currentSemesterMaterialsBase : accessibleMaterialsBase;
+
+  // Enforce locked semester filter value in current semester view
+  const effectiveSelectedSem = activeTab === "current" ? String(studentSemNorm) : selectedSem;
+
+  const filteredMaterials = baseMaterials.filter((m) => {
     const matchesSearch = 
       m.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
       m.fileName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (m.subject || "General").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (m.unit || "General").toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Department Filter (always limited to student's department since base is pre-filtered, 
+    // but matchesDept is preserved if they filter by user.department specifically)
     const matchesDept = selectedDept === "All" || m.department === selectedDept;
+    
     const matchesYear = selectedYear === "All" || m.year.toString() === selectedYear;
-    const matchesSem = selectedSem === "All" || m.semester.toString() === selectedSem;
+    
+    const matchesSem = effectiveSelectedSem === "All" || m.semester.toString() === effectiveSelectedSem;
+    
     const matchesCat = selectedCat === "All" || m.category === selectedCat;
 
     return matchesSearch && matchesDept && matchesYear && matchesSem && matchesCat;
@@ -114,9 +153,11 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
     setTimeout(() => setToastMessage(""), 4000);
   };
 
-  const departments = ["All", ...DEPARTMENTS];
+  const departmentsToRender = ["All", user.department];
+  const semestersToRender = activeTab === "current"
+    ? [String(studentSemNorm)]
+    : ["All", ...Array.from({ length: studentSemNorm }, (_, i) => String(i + 1))];
   const years = ["All", "1", "2", "3", "4"];
-  const semesters = ["All", "1", "2"];
   const categories = ["All", ...MATERIAL_CATEGORIES];
 
   return (
@@ -128,6 +169,49 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
           {toastMessage}
         </div>
       )}
+
+      {/* Tab Controller Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-2xl bg-slate-900/40 dark:bg-slate-905/60 border border-slate-705/10 dark:border-slate-800 shadow-xl">
+        <div className="space-y-1">
+          <h2 className="font-display font-bold text-lg md:text-xl text-slate-100">
+            {activeTab === "current" ? "Current Semester Materials" : "Accessible Materials"}
+          </h2>
+          <p className="text-xs text-slate-400">
+            {activeTab === "current" 
+              ? "Materials for your present academic semester." 
+              : "Current and previous semester materials available for your department."}
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-2 self-start md:self-auto bg-slate-950/60 p-1 rounded-xl border border-slate-850 font-mono text-xs">
+          <button
+            onClick={() => {
+              setActiveTab("current");
+              setSelectedSubject(null);
+            }}
+            className={`px-4 py-2 rounded-lg font-bold transition-all cursor-pointer ${
+              activeTab === "current"
+                ? "bg-theme-teal-action text-white shadow-md shadow-theme-teal-action/25 scale-[1.02]"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/50"
+            }`}
+          >
+            Current Semester
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab("accessible");
+              setSelectedSubject(null);
+            }}
+            className={`px-4 py-2 rounded-lg font-bold transition-all cursor-pointer ${
+              activeTab === "accessible"
+                ? "bg-theme-teal-action text-white shadow-md shadow-theme-teal-action/25 scale-[1.02]"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/50"
+            }`}
+          >
+            Accessible Materials
+          </button>
+        </div>
+      </div>
 
       {/* Filter and Search Action Console Panel */}
       <div className="p-5 rounded-2xl cyber-glass border border-slate-705/10 dark:border-slate-800 space-y-4 shadow-xl">
@@ -141,7 +225,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4">
           {/* Search bar */}
           <div className="sm:col-span-2 lg:col-span-4">
-            <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-500 block mb-1">
+            <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-500 block mb-1">
               Search Keyword
             </label>
             <div className="relative">
@@ -161,20 +245,20 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
 
           {/* Department Filter */}
           <div className="sm:col-span-1 lg:col-span-2">
-            <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-500 block mb-1">
+            <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-500 block mb-1">
               Department
             </label>
             <select
-              value={selectedDept}
+              value={selectedDept === "All" ? "All" : user.department}
               onChange={(e) => {
                 setSelectedDept(e.target.value);
                 setSelectedSubject(null);
               }}
               className="w-full px-3 py-2 rounded-lg bg-theme-input-bg dark:bg-slate-950 border border-theme-input-border dark:border-slate-800 text-sm text-slate-100 dark:text-slate-300 focus:outline-none focus:border-theme-teal-action focus:ring-1 focus:ring-theme-teal-action/30 cursor-pointer font-sans"
             >
-              {departments.map((d) => (
+              {departmentsToRender.map((d) => (
                 <option key={d} value={d}>
-                  {d === "All" ? "All Departments" : `${d} Department`}
+                  {d === "All" ? `All (${user.department})` : `${d} Department`}
                 </option>
               ))}
             </select>
@@ -182,7 +266,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
 
           {/* Year Filter */}
           <div className="sm:col-span-1 lg:col-span-2">
-            <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-500 block mb-1">
+            <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-500 block mb-1">
               Academic Year
             </label>
             <select
@@ -203,20 +287,21 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
 
           {/* Semester Filter */}
           <div className="sm:col-span-1 lg:col-span-2">
-            <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-500 block mb-1">
+            <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-500 block mb-1">
               Semester
             </label>
             <select
-              value={selectedSem}
+              value={effectiveSelectedSem}
+              disabled={activeTab === "current"}
               onChange={(e) => {
                 setSelectedSem(e.target.value);
                 setSelectedSubject(null);
               }}
-              className="w-full px-3 py-2 rounded-lg bg-theme-input-bg dark:bg-slate-950 border border-theme-input-border dark:border-slate-800 text-sm text-slate-100 dark:text-slate-300 focus:outline-none focus:border-theme-teal-action focus:ring-1 focus:ring-theme-teal-action/30 cursor-pointer font-sans"
+              className="w-full px-3 py-2 rounded-lg bg-theme-input-bg dark:bg-slate-950 border border-theme-input-border dark:border-slate-800 text-sm text-slate-100 dark:text-slate-300 focus:outline-none focus:border-theme-teal-action focus:ring-1 focus:ring-theme-teal-action/30 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer font-sans"
             >
-              {semesters.map((s) => (
+              {semestersToRender.map((s) => (
                 <option key={s} value={s}>
-                  {s === "All" ? "All Semesters" : `Semester ${s}`}
+                  {s === "All" ? "All Semesters" : `Semester ${s} ${activeTab === "current" ? "(Locked)" : ""}`}
                 </option>
               ))}
             </select>
@@ -224,7 +309,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
 
           {/* Category Filter */}
           <div className="sm:col-span-1 lg:col-span-2">
-            <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-500 block mb-1">
+            <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-500 block mb-1">
               Category
             </label>
             <select
@@ -244,6 +329,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
           </div>
         </div>
       </div>
+
 
       {/* Grid listing */}
       {filteredMaterials.length > 0 ? (
@@ -408,7 +494,28 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
           </div>
         )
       ) : (
-        <EmptyState type="no-materials" onAction={resetFilters} />
+        <div className="flex flex-col items-center justify-center text-center p-12 cyber-glass border border-dashed rounded-xl max-w-lg mx-auto my-6 border-slate-705/10 dark:border-slate-800 bg-slate-900/10">
+          <div className="w-16 h-16 rounded-full bg-cyan-500/10 flex items-center justify-center text-theme-teal-action mb-4 animate-pulse">
+            <FileSearch className="w-8 h-8" />
+          </div>
+          <h3 className="font-display font-medium text-base text-slate-100">
+            {activeTab === "current" 
+              ? "No materials available for your current semester yet." 
+              : "No accessible materials available yet."}
+          </h3>
+          <p className="text-xs text-slate-400 mt-2 max-w-xs">
+            Try adjusting your search/filter parameters or contact your department admin if you think this is an error.
+          </p>
+          {(searchQuery || selectedYear !== "All" || selectedSem !== "All" || selectedCat !== "All") && (
+            <button
+              onClick={resetFilters}
+              className="mt-6 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-theme-teal-action text-white text-xs font-semibold hover:bg-theme-teal-action/90 cursor-pointer shadow transition"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Reset Filters
+            </button>
+          )}
+        </div>
       )}
 
       {/* Report Issue Modal Overlay */}
