@@ -1,6 +1,37 @@
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
-const pdf = require("pdf-parse");
+const pdfModule = require("pdf-parse");
+
+/**
+ * Safely resolves the exact callable function from the imported pdf-parse module.
+ * Node ESM and CJS packaging sometimes nest default exports differently.
+ */
+function resolvePdfParseModule(moduleValue) {
+  if (typeof moduleValue === "function") {
+    console.log('[PDF Parser Resolution] Strategy resolved: direct function');
+    return moduleValue;
+  }
+  if (moduleValue && typeof moduleValue.default === "function") {
+    console.log('[PDF Parser Resolution] Strategy resolved: default property');
+    return moduleValue.default;
+  }
+  if (moduleValue && typeof moduleValue.pdf === "function") {
+    console.log('[PDF Parser Resolution] Strategy resolved: pdf property');
+    return moduleValue.pdf;
+  }
+  if (moduleValue && typeof moduleValue.parse === "function") {
+    console.log('[PDF Parser Resolution] Strategy resolved: parse property');
+    return moduleValue.parse;
+  }
+  throw new Error("PDF_PARSE_EXPORT_UNSUPPORTED");
+}
+
+let pdfParseFn;
+try {
+  pdfParseFn = resolvePdfParseModule(pdfModule);
+} catch (err) {
+  console.error('[PDF Parser Resolution] Critical: Failed to resolve pdf-parse module callable function.');
+}
 
 // PDF Extraction Configuration Limits
 const DEFAULT_MAX_CHARS = 20000;
@@ -18,11 +49,15 @@ export async function extractTextFromPdfBuffer(buffer, options = {}) {
     throw new Error('Invalid input: Expected a non-empty binary Buffer object.');
   }
 
+  if (!pdfParseFn) {
+    throw new Error('PDF_PARSE_EXPORT_UNSUPPORTED');
+  }
+
   const maxChars = options.maxPdfChars || DEFAULT_MAX_CHARS;
 
   try {
     // pdf-parse extracts the text and parses basic PDF metadata
-    const parsedData = await pdf(buffer);
+    const parsedData = await pdfParseFn(buffer);
 
     const pageCount = parsedData.numpages || null;
     let text = parsedData.text || '';
