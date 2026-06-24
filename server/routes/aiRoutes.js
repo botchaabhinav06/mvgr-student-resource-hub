@@ -104,6 +104,11 @@ router.post('/extract-pdf-text-test', verifyFirebaseToken, loadUserProfile, asyn
 
       console.log(`[AI Extraction Success] Material: ${materialId}, Chars Extracted: ${extraction.extractedChars}, Pages: ${extraction.pageCount}`);
 
+      let message = "PDF text extraction successful.";
+      if (extraction.quality && !extraction.quality.aiUsable) {
+        message = "PDF decoded, but extracted text quality is too low for reliable AI use.";
+      }
+
       return res.json({
         ok: true,
         materialId,
@@ -112,7 +117,8 @@ router.post('/extract-pdf-text-test', verifyFirebaseToken, loadUserProfile, asyn
         extractedChars: extraction.extractedChars,
         truncated: extraction.truncated,
         previewText,
-        message: "PDF text extraction successful."
+        quality: extraction.quality,
+        message
       });
     } catch (parseErr) {
       console.error(`[AI Extraction Parse Fail] Material: ${materialId}`, parseErr.message);

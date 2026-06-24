@@ -1,5 +1,6 @@
 import { PDFParse } from 'pdf-parse';
 import { createRequire } from "module";
+import { analyzeTextQuality } from "./textQualityAnalyzer.js";
 const require = createRequire(import.meta.url);
 
 let pdfModule;
@@ -127,6 +128,8 @@ export async function extractTextFromPdfBuffer(buffer, options = {}) {
       truncated = true;
     }
 
+    const quality = analyzeTextQuality(extractedText, pageCount);
+
     return {
       ok: true,
       pageCount,
@@ -134,7 +137,8 @@ export async function extractTextFromPdfBuffer(buffer, options = {}) {
       returnedChars: extractedText.length,
       truncated,
       hasText,
-      text: extractedText
+      text: extractedText,
+      quality
     };
   } catch (error) {
     console.error('[PDF Extraction Error] Failed parsing binary buffer safely:', error.message);

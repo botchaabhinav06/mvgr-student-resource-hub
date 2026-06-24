@@ -37,6 +37,20 @@ export const AdminAIControlView: React.FC<AdminAIControlViewProps> = ({ material
     extractedChars: number;
     truncated: boolean;
     previewText: string;
+    quality?: {
+      qualityStatus: "good" | "weak" | "poor" | "empty";
+      qualityScore: number;
+      meaningfulChars: number;
+      wordCount: number;
+      uniqueWordCount: number;
+      alphanumericRatio: number;
+      averageWordLength: number;
+      repeatedMarkerRatio: number;
+      pageMarkerOnlyDetected: boolean;
+      likelyScannedOrImagePdf: boolean;
+      warnings: string[];
+      aiUsable: boolean;
+    };
     message: string;
   } | null>(null);
   const [extractionError, setExtractionError] = useState<string | null>(null);
@@ -464,12 +478,18 @@ export const AdminAIControlView: React.FC<AdminAIControlViewProps> = ({ material
 
               {/* Success Result Box */}
               {extractionStatus === "success" && extractionResult && (
-                <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 space-y-3">
-                  <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-bold">
-                    <CheckCircle2 className="w-4 h-4 shrink-0" />
-                    <span>PDF Decoded Successfully</span>
+                <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 space-y-4">
+                  <div className="flex items-center justify-between border-b border-emerald-500/10 pb-2.5">
+                    <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-bold">
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      <span>PDF Decoded Successfully</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-500">
+                      {extractionResult.message.includes("quality is too low") ? "Warning: Low Quality" : "Success"}
+                    </span>
                   </div>
 
+                  {/* Extraction Metadata Grid */}
                   <div className="grid grid-cols-2 gap-2 text-[10px] font-mono text-slate-400 bg-slate-950/40 p-2.5 rounded border border-slate-850">
                     <div>
                       <span className="text-slate-500">Document Title:</span>
@@ -490,6 +510,137 @@ export const AdminAIControlView: React.FC<AdminAIControlViewProps> = ({ material
                       </p>
                     </div>
                   </div>
+
+                  {/* Quality Analysis Panel (Phase 13.1D Guard) */}
+                  {extractionResult.quality && (
+                    <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-850 space-y-3 text-[11px]">
+                      <div className="flex items-center justify-between border-b border-slate-900 pb-2">
+                        <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">
+                          Extraction Quality Analysis
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {/* Quality Status Badge */}
+                          {extractionResult.quality.qualityStatus === "good" && (
+                            <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                              Good Quality
+                            </span>
+                          )}
+                          {extractionResult.quality.qualityStatus === "weak" && (
+                            <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                              Weak Quality
+                            </span>
+                          )}
+                          {(extractionResult.quality.qualityStatus === "poor" || extractionResult.quality.qualityStatus === "empty") && (
+                            <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                              Poor Quality
+                            </span>
+                          )}
+
+                          {/* AI Usable Flag Badge */}
+                          {extractionResult.quality.aiUsable ? (
+                            <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-cyan-500/10 text-cyber-cyan border border-cyan-500/20">
+                              AI USABLE: YES
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-rose-500/10 text-rose-400 border border-rose-500/20 animate-pulse">
+                              AI USABLE: NO
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Quality Score Bar */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] font-mono">
+                          <span className="text-slate-500">Heuristic Quality Score:</span>
+                          <span className={`font-bold ${
+                            extractionResult.quality.qualityScore >= 70 ? "text-emerald-400" :
+                            extractionResult.quality.qualityScore >= 40 ? "text-amber-400" : "text-rose-400"
+                          }`}>
+                            {extractionResult.quality.qualityScore}/100
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full transition-all duration-500 ${
+                              extractionResult.quality.qualityScore >= 70 ? "bg-emerald-500" :
+                              extractionResult.quality.qualityScore >= 40 ? "bg-amber-500" : "bg-rose-500"
+                            }`}
+                            style={{ width: `${extractionResult.quality.qualityScore}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Quality Metrics Grid */}
+                      <div className="grid grid-cols-3 gap-2 pt-1 font-mono text-[10px]">
+                        <div className="bg-slate-900/40 p-2 rounded border border-slate-900/50">
+                          <span className="text-slate-500 block text-[9px]">Words Extracted</span>
+                          <span className="text-slate-200 font-bold block mt-0.5">
+                            {extractionResult.quality.wordCount}
+                          </span>
+                        </div>
+                        <div className="bg-slate-900/40 p-2 rounded border border-slate-900/50">
+                          <span className="text-slate-500 block text-[9px]">Unique Words</span>
+                          <span className="text-slate-200 font-bold block mt-0.5">
+                            {extractionResult.quality.uniqueWordCount}
+                          </span>
+                        </div>
+                        <div className="bg-slate-900/40 p-2 rounded border border-slate-900/50">
+                          <span className="text-slate-500 block text-[9px]">Alphanumeric %</span>
+                          <span className="text-slate-200 font-bold block mt-0.5">
+                            {Math.round(extractionResult.quality.alphanumericRatio * 100)}%
+                          </span>
+                        </div>
+                        <div className="bg-slate-900/40 p-2 rounded border border-slate-900/50">
+                          <span className="text-slate-500 block text-[9px]">Avg Word Len</span>
+                          <span className="text-slate-200 font-bold block mt-0.5">
+                            {extractionResult.quality.averageWordLength} chars
+                          </span>
+                        </div>
+                        <div className="bg-slate-900/40 p-2 rounded border border-slate-900/50">
+                          <span className="text-slate-500 block text-[9px]">Page Marker %</span>
+                          <span className="text-slate-200 font-bold block mt-0.5">
+                            {Math.round(extractionResult.quality.repeatedMarkerRatio * 100)}%
+                          </span>
+                        </div>
+                        <div className="bg-slate-900/40 p-2 rounded border border-slate-900/50">
+                          <span className="text-slate-500 block text-[9px]">Meaningful Chars</span>
+                          <span className="text-slate-200 font-bold block mt-0.5">
+                            {extractionResult.quality.meaningfulChars}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Heuristic Flags & Warnings */}
+                      {extractionResult.quality.warnings && extractionResult.quality.warnings.length > 0 && (
+                        <div className="space-y-1 bg-slate-900/30 p-2 rounded border border-slate-900 text-[10px]">
+                          <span className="text-slate-400 font-semibold uppercase font-mono text-[9px] block">
+                            System Flags & Warnings:
+                          </span>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {extractionResult.quality.warnings.map((warning, idx) => (
+                              <span 
+                                key={idx} 
+                                className="px-1.5 py-0.5 rounded text-[8px] font-mono font-semibold bg-slate-900 text-amber-400 border border-amber-500/10"
+                              >
+                                {warning}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Scanned / Low Quality Recommendation Warning */}
+                      {!extractionResult.quality.aiUsable && (
+                        <div className="p-3 bg-rose-500/5 border border-rose-500/20 rounded-lg text-rose-400 font-sans text-[10px] leading-relaxed">
+                          <span className="font-bold block uppercase mb-0.5 text-[9px] tracking-wider">
+                            Recommendation for Future Phases:
+                          </span>
+                          This PDF was decoded, but it may be scanned, image-only, or have a weak/broken text layer. AI summary generation is locked or not recommended unless a high-quality text-based PDF is uploaded. OCR support can be considered in future iterations if required.
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div>
                     <span className="block font-bold text-slate-400 uppercase font-mono text-[9px] tracking-wider mb-1">
