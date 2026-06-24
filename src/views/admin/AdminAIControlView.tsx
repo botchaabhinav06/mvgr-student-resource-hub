@@ -21,11 +21,18 @@ export const AdminAIControlView: React.FC<AdminAIControlViewProps> = ({ material
   // AI Diagnostics State
   const [diagnosticData, setDiagnosticData] = useState<{
     configuredModel: string;
-    fallbackModels: string[];
+    selectedModel: string;
+    availableTextModels: string[];
+    modelsAttempted: string[];
     hasProviderKey: boolean;
-    smokeTestReady: boolean;
+    discoverySupported: boolean;
+    academicPrimaryModel?: string;
+    academicFallbackModel?: string;
+    ok?: boolean;
+    message?: string;
   } | null>(null);
   const [smokeModelUsed, setSmokeModelUsed] = useState<string | null>(null);
+  const [smokeModelsAttempted, setSmokeModelsAttempted] = useState<string[]>([]);
 
   // PDF Text Extraction Test States
   const [targetMaterialId, setTargetMaterialId] = useState<string>("");
@@ -103,14 +110,34 @@ export const AdminAIControlView: React.FC<AdminAIControlViewProps> = ({ material
               "Content-Type": "application/json"
             }
           });
-          if (diagResponse.ok) {
-            const diagData = await diagResponse.json();
-            if (diagData.ok) {
-              setDiagnosticData(diagData);
-            }
+          const diagData = await diagResponse.json();
+          if (diagResponse.ok && diagData.ok) {
+            setDiagnosticData(diagData);
+          } else {
+            console.warn("[Diagnostics Fetch Warning]:", diagData?.message);
+            setDiagnosticData({
+              configuredModel: "Error fetching",
+              selectedModel: "Error",
+              availableTextModels: [],
+              modelsAttempted: [],
+              hasProviderKey: false,
+              discoverySupported: false,
+              ok: false,
+              message: diagData?.message || "Model discovery failed."
+            });
           }
-        } catch (diagErr) {
+        } catch (diagErr: any) {
           console.warn("[Diagnostics Fetch Warning]:", diagErr);
+          setDiagnosticData({
+            configuredModel: "Error fetching",
+            selectedModel: "Error",
+            availableTextModels: [],
+            modelsAttempted: [],
+            hasProviderKey: false,
+            discoverySupported: false,
+            ok: false,
+            message: diagErr.message || "Failed to load diagnostics."
+          });
         }
       } else {
         throw new Error(data?.message || "Invalid response structure from AI health endpoint.");
@@ -127,13 +154,14 @@ export const AdminAIControlView: React.FC<AdminAIControlViewProps> = ({ material
     setSmokeError(null);
     setSmokeResult(null);
     setSmokeModelUsed(null);
+    setSmokeModelsAttempted([]);
     try {
       const token = await auth.currentUser?.getIdToken();
       if (!token) {
         throw new Error("Authorization credentials missing. Please sign in again.");
       }
 
-      const response = await fetch(apiUrl("/api/ai/smoke-test"), {
+      const response = await fetch(apiUrl("/api/ai/model-generate-diagnostic"), {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -144,6 +172,9 @@ export const AdminAIControlView: React.FC<AdminAIControlViewProps> = ({ material
       const data = await response.json();
 
       if (!response.ok) {
+        if (data && data.modelsAttempted) {
+          setSmokeModelsAttempted(data.modelsAttempted);
+        }
         if (response.status === 401 || response.status === 403) {
           throw new Error("Only active administrators are authorized to execute the AI smoke test.");
         }
@@ -156,6 +187,7 @@ export const AdminAIControlView: React.FC<AdminAIControlViewProps> = ({ material
       if (data && data.ok) {
         setSmokeResult(data.response || "No response content.");
         setSmokeModelUsed(data.modelUsed || null);
+        setSmokeModelsAttempted(data.modelsAttempted || [data.modelUsed]);
         setSmokeStatus("success");
       } else {
         // Handle gracefully if missing key reported in a successful 200/OK response or payload
@@ -684,24 +716,58 @@ export const AdminAIControlView: React.FC<AdminAIControlViewProps> = ({ material
                 <span className="text-slate-300 font-bold uppercase">Gemini</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Active Model:</span>
-                <span className="text-cyber-cyan font-bold">
-                  {diagnosticData?.configuredModel || "gemini-2.5-flash"}
+                <span className="text-slate-500">Configured Model (ENV):</span>
+                <span className="text-slate-300 font-semibold">
+                  {diagnosticData?.configuredModel || "Not set"}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Fallbacks:</span>
-                <span className="text-slate-400">
-                  {diagnosticData?.fallbackModels?.join(", ") || "gemini-2.5-flash, gemini-2.0-flash, gemini-1.5-flash"}
+                <span className="text-slate-500">Academic Primary Model:</span>
+                <span className="text-cyber-cyan font-semibold">
+                  {diagnosticData?.academicPrimaryModel || "gemini-3.1-flash-lite"}
                 </span>
               </div>
               <div className="flex justify-between">
+                <span className="text-slate-500">Academic Fallback Model:</span>
+                <span className="text-slate-300 font-semibold">
+                  {diagnosticData?.academicFallbackModel || "gemini-3.5-flash"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Selected Working Model:</span>
+                <span className="text-emerald-400 font-bold">
+                  {diagnosticData?.selectedModel || "Resolving..."}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Model Discovery:</span>
+                <span className={diagnosticData?.discoverySupported ? "text-emerald-400 font-semibold" : "text-amber-400 font-semibold"}>
+                  {diagnosticData?.discoverySupported ? "Active (SDK v1.52.0)" : "Unavailable"}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1 border-t border-slate-900 pt-1.5 mt-1">
+                <span className="text-slate-500">Diagnostic Models Attempted:</span>
+                <span className="text-cyber-cyan leading-normal text-[9px]">
+                  {diagnosticData?.modelsAttempted?.length 
+                    ? diagnosticData.modelsAttempted.join(" → ") 
+                    : "None detected / waiting"}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1 border-t border-slate-900 pt-1.5 mt-1">
+                <span className="text-slate-500">Available Text Models:</span>
+                <span className="text-slate-400 leading-normal font-sans text-[9px]">
+                  {diagnosticData?.availableTextModels?.length 
+                    ? diagnosticData.availableTextModels.join(", ") 
+                    : "None detected / waiting"}
+                </span>
+              </div>
+              <div className="flex justify-between border-t border-slate-900 pt-1.5 mt-1">
                 <span className="text-slate-500">Key Location:</span>
                 <span className="text-emerald-400 font-bold">Render Secret Env</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Smoke Endpoint:</span>
-                <span className="text-slate-300">/api/ai/smoke-test</span>
+                <span className="text-slate-500">Diag Endpoint:</span>
+                <span className="text-slate-300">/api/ai/model-generate-diagnostic</span>
               </div>
               <div className="flex justify-between border-t border-slate-900 pt-2 mt-2">
                 <span className="text-slate-500">Health Status:</span>
@@ -745,7 +811,20 @@ export const AdminAIControlView: React.FC<AdminAIControlViewProps> = ({ material
                   <span className="text-emerald-400 font-bold">{smokeModelUsed}</span>
                 </div>
               )}
+              {smokeModelsAttempted.length > 0 && (
+                <div className="flex flex-col gap-1 border-t border-slate-900 pt-1.5 mt-1 text-[9px]">
+                  <span className="text-slate-500">Models Attempted Sequential:</span>
+                  <span className="text-cyber-cyan font-semibold">{smokeModelsAttempted.join(" → ")}</span>
+                </div>
+              )}
             </div>
+
+            {/* Mismatched / Stale Config Warning Banner */}
+            {diagnosticData && diagnosticData.configuredModel !== diagnosticData.selectedModel && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[10px] text-amber-300 leading-relaxed font-sans">
+                <strong className="text-amber-200">⚠️ Model Configuration Notice:</strong> The active environment model config (<code className="font-mono">{diagnosticData.configuredModel}</code>) differs from the dynamically selected stable working model (<code className="font-mono">{diagnosticData.selectedModel}</code>). Update <code className="font-mono">GEMINI_MODEL</code> in Render to the selected working model to enforce this standard.
+              </div>
+            )}
 
             {/* Success Results / Error Display Panel */}
             {(smokeResult || smokeError || healthError) && (

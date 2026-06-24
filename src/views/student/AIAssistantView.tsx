@@ -48,6 +48,7 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
     code?: string;
     stage?: string;
     retryable?: boolean;
+    modelsAttempted?: string[];
   }
 
   // PDF Extraction Quality States
@@ -182,7 +183,8 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
           message: data?.message || `AI extraction failed with status ${response.status}`,
           code: data?.code || "HTTP_ERROR",
           stage: data?.stage || "provider_generation",
-          retryable: data?.retryable !== undefined ? data.retryable : false
+          retryable: data?.retryable !== undefined ? data.retryable : false,
+          modelsAttempted: data?.modelsAttempted || null
         };
       }
 
@@ -201,7 +203,8 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
           message: data?.message || "Academic AI generated an empty response.",
           code: "EMPTY_RESPONSE",
           stage: "provider_generation",
-          retryable: true
+          retryable: true,
+          modelsAttempted: data?.modelsAttempted || null
         };
       }
     } catch (err: any) {
@@ -210,7 +213,8 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
         message: err.message || "An unexpected error occurred during AI content generation.",
         code: err.code || "CLIENT_ERROR",
         stage: err.stage || "unknown",
-        retryable: err.retryable !== undefined ? err.retryable : false
+        retryable: err.retryable !== undefined ? err.retryable : false,
+        modelsAttempted: err.modelsAttempted || null
       });
     } finally {
       setAiLoading(false);
@@ -690,9 +694,19 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
                 <div className="p-4 bg-red-950/20 border border-red-900/30 rounded-xl space-y-3">
                   <div className="flex items-center gap-2 text-red-400 font-mono text-xs font-bold uppercase">
                     <AlertTriangle className="w-4 h-4" />
-                    <span>{aiError.code === "MODEL_NOT_AVAILABLE" ? "AI Model Temporarily Unavailable" : "Generation Blocked"}</span>
+                    <span>
+                    {aiError.code === "ACADEMIC_PROMPT_TOO_LONG" ? "Document Too Large for AI" : 
+                     aiError.code === "CLIENT_PROMPT_TOO_LONG" ? "Prompt Size Limit Reached" :
+                     aiError.code === "MODEL_NOT_AVAILABLE" ? "AI Model Temporarily Unavailable" : "Generation Blocked"}
+                  </span>
                   </div>
                   <p className="text-xs text-red-200 leading-relaxed">
+                    {aiError.code === "ACADEMIC_PROMPT_TOO_LONG" && (
+                      "This PDF is too large for a single AI request. Please try a smaller material or split the PDF."
+                    )}
+                    {aiError.code === "CLIENT_PROMPT_TOO_LONG" && (
+                      "The request is too large for the current AI configuration."
+                    )}
                     {aiError.code === "PROVIDER_HIGH_DEMAND" && (
                       "The AI platform is currently experiencing high traffic. Please try again in 1-2 minutes, or click the button below to retry."
                     )}
@@ -709,7 +723,7 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
                       "This PDF lacks indexable text layer structure. Please select a text-based document or contact your instructor."
                     )}
                     {aiError.code === "MODEL_NOT_AVAILABLE" && (
-                      "Text generation is temporarily unavailable. Please try again after a few minutes."
+                      "Both configured Gemini academic models are temporarily unavailable. Please try again later."
                     )}
                     {!["PROVIDER_HIGH_DEMAND", "PROVIDER_RATE_LIMIT", "PROVIDER_QUOTA_EXCEEDED", "GEMINI_API_KEY_MISSING", "PDF_TEXT_NOT_AI_USABLE", "MODEL_NOT_AVAILABLE"].includes(aiError.code || "") && (
                       aiError.message
@@ -725,6 +739,10 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
                     <div className="flex justify-between">
                       <span className="text-slate-500 uppercase">Error Code:</span>
                       <span className="text-red-400/90 font-bold">{aiError.code || "UNKNOWN"}</span>
+                    </div>
+                    <div className="flex justify-between flex-col md:flex-row gap-0.5 md:gap-0">
+                      <span className="text-slate-500 uppercase">Models Attempted:</span>
+                      <span className="text-cyber-cyan font-bold">{aiError.modelsAttempted?.join(" → ") || "gemini-3.1-flash-lite → gemini-3.5-flash"}</span>
                     </div>
                   </div>
 

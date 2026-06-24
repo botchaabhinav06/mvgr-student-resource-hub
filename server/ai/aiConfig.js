@@ -6,9 +6,9 @@ const hasGeminiKey = !!process.env.GEMINI_API_KEY;
 export const aiConfig = {
   hasGeminiKey,
   provider: "gemini",
-  // Allow GEMINI_MODEL override, default to gemini-2.5-flash as the modern recommended standard
-  defaultModel: process.env.GEMINI_MODEL || "gemini-2.5-flash",
-  fallbackModels: ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"],
+  // Allow GEMINI_MODEL override, default to gemini-3.1-flash-lite as the modern recommended standard
+  defaultModel: process.env.GEMINI_MODEL || "gemini-3.1-flash-lite",
+  fallbackModels: ["gemini-3.5-flash"],
   
   // Quotas for different user roles
   studentDailyLimit: 5,

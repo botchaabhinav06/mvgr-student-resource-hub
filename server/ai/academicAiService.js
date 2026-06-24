@@ -10,17 +10,51 @@ import { aiConfig } from './aiConfig.js';
  * Proxies to the shared generateGeminiText function to guarantee model alignment and fallback resilience.
  * 
  * @param {string} promptText - Bounded prompt text.
+ * @param {string} purpose - Purpose of generation.
  * @returns {Promise<Object>} Object with response text and model used.
  */
-async function runAcademicGeminiCall(promptText) {
+async function runAcademicGeminiCall(promptText, purpose) {
   const result = await generateGeminiText({
     prompt: promptText,
-    purpose: "academic_generation",
-    maxOutputTokens: 3000
+    purpose: purpose,
+    maxOutputTokens: 3000,
+    maxPromptChars: 30000
   });
   return {
     text: result.text,
     modelUsed: result.modelUsed
+  };
+}
+
+/**
+ * Prepares extracted text for prompt with safety truncation based on action purpose.
+ * 
+ * @param {string} extractedText - Raw extracted text.
+ * @param {string} action - 'pdf_summary' | 'important_questions'
+ * @returns {Object} Preparation metadata and text.
+ */
+export function prepareAcademicTextForPrompt(extractedText, action) {
+  const charLimits = {
+    pdf_summary: 22000,
+    important_questions: 24000,
+  };
+  
+  const limit = charLimits[action] || 12000;
+  
+  if (extractedText.length <= limit) {
+    return {
+      textForPrompt: extractedText,
+      wasTruncated: false,
+      originalCharCount: extractedText.length,
+      usedCharCount: extractedText.length
+    };
+  }
+  
+  return {
+    textForPrompt: extractedText.substring(0, limit),
+    wasTruncated: true,
+    originalCharCount: extractedText.length,
+    usedCharCount: limit
   };
 }
 
@@ -166,7 +200,7 @@ export async function generateAcademicAiOutput(userProfile, materialId, action) 
   let extraction;
   try {
     extraction = await extractTextFromPdfBuffer(pdfBuffer, {
-      maxPdfChars: 20000 // Limit text layer sent to model
+      maxPdfChars: 25000 // Limit text layer sent to model
     });
   } catch (parseErr) {
     console.error(`[Academic AI Service Parser Fail] Material: ${materialId}`, parseErr.message);
@@ -245,6 +279,8 @@ export async function generateAcademicAiOutput(userProfile, materialId, action) 
   }
 
   // 6. Build Prompt & Call Gemini
+  const prepared = prepareAcademicTextForPrompt(extraction.text, action);
+  const textForPrompt = prepared.textForPrompt;
   let promptText = "";
   if (action === 'pdf_summary') {
     promptText = `
@@ -271,7 +307,7 @@ Provide highly structured, practical study/revision bullets for exam preparation
 
 ---
 Source PDF Extracted Text:
-${extraction.text}
+${textForPrompt}
 ---
 `;
   } else if (action === 'important_questions') {
@@ -299,14 +335,14 @@ Add a brief list of which topics from the PDF were successfully covered by these
 
 ---
 Source PDF Extracted Text:
-${extraction.text}
+${textForPrompt}
 ---
 `;
   }
 
   let aiResult;
   try {
-    aiResult = await runAcademicGeminiCall(promptText);
+    aiResult = await runAcademicGeminiCall(promptText, action);
   } catch (geminiErr) {
     console.error(`[Academic AI Service Gemini Call Fail] Material: ${materialId}`, geminiErr.message);
     const code = geminiErr.code || "PROVIDER_REQUEST_FAILED";

@@ -45,8 +45,8 @@ To minimize risk and optimize compute credits, the platform will initially relea
 
 The primary, secondary, and fallback providers are structured to ensure high availability, compliance, and strict secret privacy.
 
-1. **Primary Provider: Google Gemini API** (`gemini-2.5-flash` or `gemini-1.5-flash`)
-   * *Justification*: Unmatched context window, direct native support for PDF structured document processing, highly cost-effective, and fully aligned with the Google AI Studio ecosystem.
+1. **Primary Provider: Google Gemini API** (`gemini-3.1-flash-lite` as primary academic model, `gemini-3.5-flash` as stronger fallback)
+   * *Justification*: `gemini-3.1-flash-lite` is preferred for cost-efficient, high-volume academic generation, while `gemini-3.5-flash` is used as a stronger fallback. Older 2.0/1.5 models are not default fallbacks. Direct native support for PDF structured document processing.
 2. **Alternative Fallbacks**: Groq (for blazing-fast text-only Llama-3/Gemma-2 completion), OpenRouter, or OpenAI API.
 3. **Secret Safety Protocol**:
    * **Backend-Only Execution**: The Gemini API key resides solely on the Render production environment (`GEMINI_API_KEY`).
@@ -167,7 +167,7 @@ Cache database to eliminate repeated identical LLM calls.
   "generatedBy": "string (uid)",
   "generatedRole": "student | faculty",
   "generatedAt": "timestamp (ISO String)",
-  "model": "gemini-2.5-flash",
+  "model": "gemini-3.1-flash-lite",
   "sourceHash": "string (PDF content or size/date metadata fingerprint)"
 }
 ```
@@ -202,7 +202,7 @@ System configurations adjustable via the Admin command dashboard.
   "maxPdfChars": 150000,
   "maxPdfPages": 15,
   "provider": "google-gemini",
-  "model": "gemini-2.5-flash",
+  "model": "gemini-3.1-flash-lite",
   "updatedAt": "timestamp (ISO String)",
   "updatedBy": "string (uid)"
 }

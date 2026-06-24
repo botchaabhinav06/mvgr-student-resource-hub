@@ -3,7 +3,7 @@ import { adminDb } from '../firebaseAdmin.js';
 import { verifyFirebaseToken } from '../middleware/verifyFirebaseToken.js';
 import { loadUserProfile } from '../middleware/loadUserProfile.js';
 import { aiConfig } from '../ai/aiConfig.js';
-import { runGeminiTextPrompt, generateGeminiText } from '../ai/geminiProvider.js';
+import { runGeminiTextPrompt, generateGeminiText, discoverGeminiModels, selectWorkingGeminiModel } from '../ai/geminiProvider.js';
 import { validateMaterialAccess } from '../ai/materialAccessHelper.js';
 import { fetchR2ObjectAsBuffer } from '../ai/r2InternalFetcher.js';
 import { extractTextFromPdfBuffer } from '../ai/pdfTextExtractor.js';
@@ -414,7 +414,7 @@ router.post('/smoke-test', verifyFirebaseToken, loadUserProfile, async (req, res
  * Returns configurations of default and fallback models.
  * Strictly restricted to active Administrators only.
  */
-router.get('/models-diagnostic', verifyFirebaseToken, loadUserProfile, (req, res) => {
+router.get('/models-diagnostic', verifyFirebaseToken, loadUserProfile, async (req, res) => {
   try {
     if (!isAdmin(req.userProfile)) {
       return res.status(403).json({
@@ -423,12 +423,41 @@ router.get('/models-diagnostic', verifyFirebaseToken, loadUserProfile, (req, res
       });
     }
 
+    const discovery = await discoverGeminiModels();
+    if (!discovery.ok) {
+      return res.status(502).json({
+        ok: false,
+        code: "MODEL_DISCOVERY_FAILED",
+        message: discovery.message || "Could not list Gemini models with the current backend SDK or API key.",
+        discoverySupported: discovery.supported
+      });
+    }
+
+    const selection = await selectWorkingGeminiModel();
+
+    const envModel = process.env.GEMINI_MODEL ? String(process.env.GEMINI_MODEL).trim() : null;
+    const prioritizedModelsAttempted = [];
+    if (envModel) {
+      prioritizedModelsAttempted.push(envModel);
+    }
+    if (!prioritizedModelsAttempted.includes("gemini-3.1-flash-lite")) {
+      prioritizedModelsAttempted.push("gemini-3.1-flash-lite");
+    }
+    if (!prioritizedModelsAttempted.includes("gemini-3.5-flash")) {
+      prioritizedModelsAttempted.push("gemini-3.5-flash");
+    }
+
     res.json({
       ok: true,
-      configuredModel: aiConfig.defaultModel,
-      fallbackModels: aiConfig.fallbackModels,
       hasProviderKey: aiConfig.hasGeminiKey,
-      smokeTestReady: aiConfig.hasGeminiKey
+      configuredModel: envModel || "Not set",
+      academicPrimaryModel: "gemini-3.1-flash-lite",
+      academicFallbackModel: "gemini-3.5-flash",
+      selectedModel: selection.modelId,
+      availableTextModels: selection.availableTextModels || [],
+      modelsAttempted: prioritizedModelsAttempted,
+      discoverySupported: selection.discoverySupported,
+      message: "Gemini model diagnostics completed safely."
     });
   } catch (error) {
     console.error('[AI Diagnostic Route Error]:', error);
@@ -471,9 +500,9 @@ router.post('/model-generate-diagnostic', verifyFirebaseToken, loadUserProfile, 
     if (result.ok) {
       return res.json({
         ok: true,
-        message: "AI model generate diagnostic successful.",
-        response: result.text ? result.text.trim() : null,
-        modelUsed: result.modelUsed
+        response: result.text ? result.text.trim() : "model diagnostic ok.",
+        modelUsed: result.modelUsed,
+        modelsAttempted: result.modelsAttempted || [result.modelUsed]
       });
     } else {
       return res.status(502).json({

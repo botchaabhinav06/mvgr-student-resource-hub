@@ -139,6 +139,202 @@ export function getFriendlyErrorMessage(category, rawMessage) {
 }
 
 /**
+ * Discover and list available Gemini models using the configured API key.
+ * Only returns safe metadata to prevent exposing secrets.
+ */
+export async function discoverGeminiModels() {
+  const client = getGeminiClient();
+  if (!client) {
+    return {
+      supported: true,
+      ok: false,
+      message: "Gemini API key is not configured.",
+      models: []
+    };
+  }
+
+  try {
+    const pager = await client.models.list();
+    const modelsList = [];
+    
+    // Safely iterate through the pager or list
+    if (pager && typeof pager[Symbol.asyncIterator] === "function") {
+      for await (const m of pager) {
+        modelsList.push(m);
+      }
+    } else if (pager && Array.isArray(pager.page)) {
+      modelsList.push(...pager.page);
+    } else if (pager && Array.isArray(pager)) {
+      modelsList.push(...pager);
+    }
+
+    // Map to safe metadata
+    const mapped = modelsList.map(m => {
+      // Clean up the name by removing 'models/' prefix if present
+      const cleanName = m.name ? m.name.replace(/^models\//, '') : '';
+      return {
+        name: cleanName,
+        fullName: m.name || '',
+        displayName: m.displayName || '',
+        description: m.description || '',
+        supportedActions: m.supportedActions || [],
+        inputTokenLimit: m.inputTokenLimit || null,
+        outputTokenLimit: m.outputTokenLimit || null
+      };
+    });
+
+    return {
+      supported: true,
+      ok: true,
+      models: mapped
+    };
+  } catch (error) {
+    console.warn("[Gemini Model Discovery Warn] Failed to list models:", error.message);
+    return {
+      supported: true,
+      ok: false,
+      message: error.message || "Failed to retrieve model list from provider.",
+      models: []
+    };
+  }
+}
+
+/**
+ * Filter discovered models that support text/generateContent.
+ */
+export function filterTextGenerationModels(models) {
+  if (!Array.isArray(models) || models.length === 0) {
+    return [];
+  }
+  
+  return models.filter(m => {
+    const id = (m.name || "").toLowerCase();
+    
+    // Skip embedding, aqa, and image-only/deprecated models
+    if (
+      id.includes("embed") || 
+      id.includes("aqa") || 
+      id.includes("bidi") || 
+      id.includes("imagen")
+    ) {
+      return false;
+    }
+
+    // Check if supportedActions exists and has generateContent
+    if (m.supportedActions && m.supportedActions.length > 0) {
+      const hasGenerate = m.supportedActions.some(action => 
+        action.toLowerCase().includes("generatecontent")
+      );
+      if (!hasGenerate) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
+
+/**
+ * Resolves the absolute best Gemini model ID to use dynamically.
+ */
+export async function selectWorkingGeminiModel({ purpose } = {}) {
+  const envModel = process.env.GEMINI_MODEL ? String(process.env.GEMINI_MODEL).trim() : null;
+  
+  // Run discovery
+  const discovery = await discoverGeminiModels();
+  
+  const fallbackList = [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash"
+  ];
+
+  if (!discovery.ok || !discovery.models || discovery.models.length === 0) {
+    // Discovery failed or is unavailable - use envModel first if present, otherwise conservative fallback
+    if (envModel) {
+      return {
+        modelId: envModel,
+        discoverySupported: discovery.supported,
+        discoveryOk: false,
+        availableTextModels: [envModel, ...fallbackList],
+        source: "env_override_fallback"
+      };
+    }
+    return {
+      modelId: "gemini-3.1-flash-lite",
+      discoverySupported: discovery.supported,
+      discoveryOk: false,
+      availableTextModels: fallbackList,
+      source: "hardcoded_default"
+    };
+  }
+
+  // Filter text-generation models
+  const textModels = filterTextGenerationModels(discovery.models);
+  const textModelIds = textModels.map(m => m.name);
+
+  // If envModel is provided and valid in discovered text models, use it!
+  if (envModel && textModelIds.includes(envModel)) {
+    return {
+      modelId: envModel,
+      discoverySupported: true,
+      discoveryOk: true,
+      availableTextModels: textModelIds,
+      source: "env_override_verified"
+    };
+  }
+
+  // Otherwise, select the best discovered Flash/Flash-Lite or Pro model
+  const preferredDiscoveryPatterns = [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash"
+  ];
+
+  for (const pattern of preferredDiscoveryPatterns) {
+    if (textModelIds.includes(pattern)) {
+      return {
+        modelId: pattern,
+        discoverySupported: true,
+        discoveryOk: true,
+        availableTextModels: textModelIds,
+        source: "discovered_preferred"
+      };
+    }
+  }
+
+  // Fallback to any discovered text-capable model containing 'flash' or 'lite'
+  const flashModel = textModelIds.find(id => id.includes("flash") || id.includes("lite"));
+  if (flashModel) {
+    return {
+      modelId: flashModel,
+      discoverySupported: true,
+      discoveryOk: true,
+      availableTextModels: textModelIds,
+      source: "discovered_any_flash"
+    };
+  }
+
+  const anyTextModel = textModelIds[0];
+  if (anyTextModel) {
+    return {
+      modelId: anyTextModel,
+      discoverySupported: true,
+      discoveryOk: true,
+      availableTextModels: textModelIds,
+      source: "discovered_any_text"
+    };
+  }
+
+  // Last resort fallback
+  return {
+    modelId: envModel || "gemini-3.1-flash-lite",
+    discoverySupported: true,
+    discoveryOk: true,
+    availableTextModels: textModelIds,
+    source: "last_resort_fallback"
+  };
+}
+
+/**
  * Runs a protected, size-limited text prompt via the Gemini client with a fallback model try-catch loop.
  * Designed for short interactive inputs, smoke tests, and academic summary/questions generation.
  * @param {Object} params
@@ -147,7 +343,7 @@ export function getFriendlyErrorMessage(category, rawMessage) {
  * @param {number} [params.maxOutputTokens]
  * @returns {Promise<Object>} Object with ok, text, and modelUsed.
  */
-export async function generateGeminiText({ prompt, purpose, maxOutputTokens }) {
+export async function generateGeminiText({ prompt, purpose, maxOutputTokens, maxPromptChars }) {
   if (!prompt || typeof prompt !== 'string') {
     const err = new Error('Invalid prompt input.');
     err.code = "CLIENT_ERROR";
@@ -157,11 +353,26 @@ export async function generateGeminiText({ prompt, purpose, maxOutputTokens }) {
   }
 
   const trimmedPrompt = prompt.trim();
-  const maxLimit = aiConfig.maxPromptChars || 25000;
+  
+  // Purpose-based prompt limits
+  let maxLimit = 12000; // Default
+  if (purpose === "model_diagnostic") maxLimit = 200;
+  if (purpose === "pdf_summary" || purpose === "important_questions") maxLimit = 30000;
+  
+  // Allow manual override
+  if (typeof maxPromptChars === 'number') maxLimit = maxPromptChars;
+
   if (trimmedPrompt.length > maxLimit) {
-    const err = new Error(`Prompt length exceeds maximum allowed character count of ${maxLimit}.`);
-    err.code = "CLIENT_ERROR";
-    err.stage = "provider_generation";
+    const errorCode = purpose === "pdf_summary" || purpose === "important_questions" 
+      ? "ACADEMIC_PROMPT_TOO_LONG" 
+      : "CLIENT_PROMPT_TOO_LONG";
+    
+    const err = new Error(purpose === "pdf_summary" || purpose === "important_questions"
+      ? "This document is too large for one AI generation request. Please use a smaller PDF or split the material."
+      : `Prompt length exceeds maximum allowed character count of ${maxLimit}.`);
+    
+    err.code = errorCode;
+    err.stage = "prompt_preparation";
     err.retryable = false;
     throw err;
   }
@@ -175,23 +386,42 @@ export async function generateGeminiText({ prompt, purpose, maxOutputTokens }) {
     throw err;
   }
 
-  // Construct conservative fallback model list
+  // Get selected working model and available candidates
+  const selection = await selectWorkingGeminiModel({ purpose });
+  const selectedModelId = selection.modelId;
+  const availableModels = selection.availableTextModels || [];
+
+  // Compile list of models to try
   const modelsToTry = [];
-  if (process.env.GEMINI_MODEL) {
-    const envModel = String(process.env.GEMINI_MODEL).trim();
-    if (envModel) {
-      modelsToTry.push(envModel);
-    }
+  
+  // 1. GEMINI_MODEL override from environment
+  const envModel = process.env.GEMINI_MODEL ? String(process.env.GEMINI_MODEL).trim() : null;
+  if (envModel) {
+    modelsToTry.push(envModel);
   }
-  const standardFallbacks = [
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash"
-  ];
-  for (const m of standardFallbacks) {
+
+  // 2. Preferred primary: gemini-3.1-flash-lite
+  if (!modelsToTry.includes("gemini-3.1-flash-lite")) {
+    modelsToTry.push("gemini-3.1-flash-lite");
+  }
+
+  // 3. Preferred fallback: gemini-3.5-flash
+  if (!modelsToTry.includes("gemini-3.5-flash")) {
+    modelsToTry.push("gemini-3.5-flash");
+  }
+
+  // 4. Dynamic selected model if not already added
+  if (selectedModelId && !modelsToTry.includes(selectedModelId)) {
+    modelsToTry.push(selectedModelId);
+  }
+
+  // 5. Append other safe text models from discovery (skipping old 2.0/1.5/2.5 defaults)
+  for (const m of availableModels) {
     if (m && !modelsToTry.includes(m)) {
-      modelsToTry.push(m);
+      const lower = m.toLowerCase();
+      if (!lower.includes("1.5-flash") && !lower.includes("2.0-flash") && !lower.includes("2.5-flash")) {
+        modelsToTry.push(m);
+      }
     }
   }
 
@@ -217,7 +447,8 @@ export async function generateGeminiText({ prompt, purpose, maxOutputTokens }) {
         return {
           ok: true,
           text: response.text,
-          modelUsed: modelId
+          modelUsed: modelId,
+          modelsAttempted
         };
       }
       throw new Error("Empty text response from Gemini provider.");
@@ -243,7 +474,7 @@ export async function generateGeminiText({ prompt, purpose, maxOutputTokens }) {
     }
   }
 
-  // All fallback models failed
+  // All attempted models failed
   const finalErrorType = "MODEL_NOT_AVAILABLE";
   const err = new Error("AI text generation is temporarily unavailable. Please try again later.");
   err.code = finalErrorType;
