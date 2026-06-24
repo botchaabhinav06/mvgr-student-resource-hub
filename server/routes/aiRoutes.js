@@ -11,10 +11,21 @@ import { generateAcademicAiOutput, getIndiaDateKey } from '../ai/academicAiServi
 
 const router = express.Router();
 
-// Helper to check if the user is an active administrator
-function isAdmin(userProfile) {
-  return userProfile && userProfile.role === 'admin' && (userProfile.status === 'active' || !userProfile.status);
-}
+/**
+ * GET /api/ai/health
+ * Checks that the backend AI foundation is registered and active.
+ */
+router.get('/health', (req, res) => {
+  res.json({ 
+    ok: true,
+    aiModule: "enabled",
+    provider: aiConfig.provider,
+    hasProviderKey: aiConfig.hasGeminiKey,
+    academicPrimaryModel: "gemini-3.1-flash-lite",
+    academicFallbackModel: "gemini-3.5-flash",
+    message: "AI backend foundation is ready."
+  });
+});
 
 // Helper to check if the user is an active faculty or admin
 function isFacultyOrAdmin(userProfile) {
