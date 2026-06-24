@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { Sparkles, Shield, ToggleLeft, Sliders, Activity, Key, Database, AlertCircle, RefreshCw, Layers, CheckCircle2, XCircle, Play, Loader2 } from "lucide-react";
+import { Sparkles, Shield, ToggleLeft, Sliders, Activity, Key, Database, AlertCircle, RefreshCw, Layers, CheckCircle2, XCircle, Play, Loader2, FileText } from "lucide-react";
 import { auth } from "../../firebase/firebaseConfig";
 import { apiUrl } from "../../lib/apiBase";
 
-export const AdminAIControlView: React.FC = () => {
+interface AdminAIControlViewProps {
+  materials?: any[];
+}
+
+export const AdminAIControlView: React.FC<AdminAIControlViewProps> = ({ materials = [] }) => {
   // AI Health Check States
   const [healthStatus, setHealthStatus] = useState<"unchecked" | "checking" | "success" | "failed">("unchecked");
   const [healthData, setHealthData] = useState<any | null>(null);
@@ -22,6 +26,25 @@ export const AdminAIControlView: React.FC = () => {
     smokeTestReady: boolean;
   } | null>(null);
   const [smokeModelUsed, setSmokeModelUsed] = useState<string | null>(null);
+
+  // PDF Text Extraction Test States
+  const [targetMaterialId, setTargetMaterialId] = useState<string>("");
+  const [extractionStatus, setExtractionStatus] = useState<"idle" | "loading" | "success" | "failed">("idle");
+  const [extractionResult, setExtractionResult] = useState<{
+    materialId: string;
+    title: string;
+    pageCount: number | null;
+    extractedChars: number;
+    truncated: boolean;
+    previewText: string;
+    message: string;
+  } | null>(null);
+  const [extractionError, setExtractionError] = useState<string | null>(null);
+
+  // Filter active Cloudflare R2 materials for easy selector
+  const r2Materials = materials.filter(
+    (m) => m.storageProvider === "cloudflare-r2" && m.status === "active"
+  );
 
   // Trigger health check on load
   useEffect(() => {
@@ -137,6 +160,51 @@ export const AdminAIControlView: React.FC = () => {
       } else {
         setSmokeError(msg);
       }
+    }
+  };
+
+  const handleExtractText = async (selectedId?: string) => {
+    const materialId = selectedId || targetMaterialId;
+    if (!materialId) {
+      setExtractionError("Please select or enter a material ID.");
+      return;
+    }
+
+    setExtractionStatus("loading");
+    setExtractionError(null);
+    setExtractionResult(null);
+
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) {
+        throw new Error("Unable to retrieve session credentials. Please sign in again.");
+      }
+
+      const response = await fetch(apiUrl("/api/ai/extract-pdf-text-test"), {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ materialId })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || `Extraction failed with server status ${response.status}`);
+      }
+
+      if (data && data.ok) {
+        setExtractionResult(data);
+        setExtractionStatus("success");
+      } else {
+        throw new Error(data.message || "Failed to parse PDF text extraction payload.");
+      }
+    } catch (err: any) {
+      console.error("[PDF Extraction UI Error]:", err);
+      setExtractionError(err.message || "An unexpected error occurred during PDF text extraction.");
+      setExtractionStatus("failed");
     }
   };
 
@@ -305,6 +373,134 @@ export const AdminAIControlView: React.FC = () => {
                   />
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Cloudflare R2 PDF Text Extraction Test (Phase 13.1) */}
+          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-6">
+            <div className="flex items-center gap-2.5 border-b border-slate-800 pb-4">
+              <FileText className="w-4 h-4 text-cyber-cyan" />
+              <h3 className="text-xs font-mono font-extrabold text-slate-300 uppercase tracking-widest">
+                R2 PDF Text Extraction Test (Phase 13.1)
+              </h3>
+            </div>
+
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              Verify secure backend-only text extraction from Cloudflare R2 PDF documents. Select an active resource or manually provide a materialId to test role validation and whitespace normalization.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block font-bold text-slate-400 uppercase font-mono text-[9px] tracking-wider mb-1">
+                  Active R2 Material Catalog
+                </label>
+                {r2Materials.length === 0 ? (
+                  <p className="text-[10px] text-slate-500 font-mono italic">
+                    No active Cloudflare R2 materials found in local state.
+                  </p>
+                ) : (
+                  <select
+                    value={targetMaterialId}
+                    onChange={(e) => {
+                      setTargetMaterialId(e.target.value);
+                      setExtractionError(null);
+                      setExtractionResult(null);
+                    }}
+                    className="w-full px-3 py-2 rounded bg-slate-950 border border-slate-800 text-slate-300 font-sans text-xs focus:outline-none focus:border-cyan-500"
+                  >
+                    <option value="">-- Choose Active R2 Study Resource --</option>
+                    {r2Materials.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.title || "Untitled"} ({m.department || "General"} | {m.id})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-400 uppercase font-mono text-[9px] tracking-wider mb-1">
+                  Or Enter Custom Material ID
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={targetMaterialId}
+                    onChange={(e) => {
+                      setTargetMaterialId(e.target.value);
+                      setExtractionError(null);
+                      setExtractionResult(null);
+                    }}
+                    placeholder="e.g. MAT-1719216000"
+                    className="flex-1 px-3 py-1.5 rounded bg-slate-950 border border-slate-800 text-slate-300 font-mono text-xs focus:outline-none focus:border-cyan-500"
+                  />
+                  <button
+                    onClick={() => handleExtractText()}
+                    disabled={extractionStatus === "loading" || !targetMaterialId}
+                    className="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 text-slate-950 font-bold rounded text-xs transition duration-150 flex items-center gap-1 cursor-pointer"
+                  >
+                    {extractionStatus === "loading" ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Play className="w-3 h-3" />
+                    )}
+                    <span>Run</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Extraction error reporting */}
+              {extractionError && (
+                <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold">Extraction Test Failed:</span>
+                    <p className="mt-0.5 font-mono text-[10px] text-rose-300 leading-relaxed font-semibold">
+                      {extractionError}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Success Result Box */}
+              {extractionStatus === "success" && extractionResult && (
+                <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 space-y-3">
+                  <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-bold">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>PDF Decoded Successfully</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-[10px] font-mono text-slate-400 bg-slate-950/40 p-2.5 rounded border border-slate-850">
+                    <div>
+                      <span className="text-slate-500">Document Title:</span>
+                      <p className="text-slate-200 font-bold truncate">{extractionResult.title}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Page Count:</span>
+                      <p className="text-slate-200 font-bold">{extractionResult.pageCount ?? "N/A"}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Extracted Chars:</span>
+                      <p className="text-slate-200 font-bold">{extractionResult.extractedChars} chars</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Truncated:</span>
+                      <p className={extractionResult.truncated ? "text-amber-400 font-bold" : "text-emerald-400 font-bold"}>
+                        {extractionResult.truncated ? "Yes (>20k Chars)" : "No"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="block font-bold text-slate-400 uppercase font-mono text-[9px] tracking-wider mb-1">
+                      Text Preview (Max 1000 Chars)
+                    </span>
+                    <div className="p-3 rounded bg-slate-950 text-slate-300 font-mono text-[10px] leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap border border-slate-850">
+                      {extractionResult.previewText}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

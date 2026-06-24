@@ -979,7 +979,7 @@ export default function App() {
         case "ADMIN_USERS":
           return <AdminUserManagement />;
         case "ADMIN_AI_CONTROL":
-          return <AdminAIControlView />;
+          return <AdminAIControlView materials={materials} />;
         default:
           return <p className="text-slate-400">View Not Configured</p>;
       }

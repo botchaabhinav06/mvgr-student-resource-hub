@@ -3,12 +3,22 @@ import { verifyFirebaseToken } from '../middleware/verifyFirebaseToken.js';
 import { loadUserProfile } from '../middleware/loadUserProfile.js';
 import { aiConfig } from '../ai/aiConfig.js';
 import { runGeminiTextPrompt } from '../ai/geminiProvider.js';
+import { validateMaterialAccess } from '../ai/materialAccessHelper.js';
+import { fetchR2ObjectAsBuffer } from '../ai/r2InternalFetcher.js';
+import { extractTextFromPdfBuffer } from '../ai/pdfTextExtractor.js';
 
 const router = express.Router();
 
 // Helper to check if the user is an active administrator
 function isAdmin(userProfile) {
   return userProfile && userProfile.role === 'admin' && (userProfile.status === 'active' || !userProfile.status);
+}
+
+// Helper to check if the user is an active faculty or admin
+function isFacultyOrAdmin(userProfile) {
+  const role = userProfile && userProfile.role;
+  const status = userProfile && (userProfile.status || userProfile.accountStatus || 'active');
+  return (role === 'admin' || role === 'faculty') && status === 'active';
 }
 
 /**
@@ -25,6 +35,102 @@ router.get('/health', verifyFirebaseToken, loadUserProfile, (req, res) => {
     features: aiConfig.plannedFeatures,
     message: "AI backend foundation is ready. Academic AI features are planned."
   });
+});
+
+/**
+ * POST /api/ai/extract-pdf-text-test
+ * Secure, internal backend-only PDF text extraction test.
+ * Restricted to active administrators and faculty members only.
+ */
+router.post('/extract-pdf-text-test', verifyFirebaseToken, loadUserProfile, async (req, res) => {
+  try {
+    if (!isFacultyOrAdmin(req.userProfile)) {
+      return res.status(403).json({
+        ok: false,
+        message: "Only active faculty members and administrators can execute the PDF text extraction test."
+      });
+    }
+
+    const { materialId } = req.body || {};
+    if (!materialId) {
+      return res.status(400).json({
+        ok: false,
+        message: "Missing required parameter 'materialId' in request body."
+      });
+    }
+
+    // Step 1: Validate material access permissions
+    const accessResult = await validateMaterialAccess(req.userProfile, materialId);
+    if (!accessResult.authorized) {
+      console.warn(`[AI Extraction Access Denied] User: ${req.user.uid}, Material: ${materialId}, Code: ${accessResult.code}`);
+      return res.status(403).json({
+        ok: false,
+        code: accessResult.code,
+        message: accessResult.message || "Access denied."
+      });
+    }
+
+    const { material, storagePath } = accessResult;
+
+    // Step 2: Retrieve binary from private Cloudflare R2
+    let pdfBuffer;
+    try {
+      pdfBuffer = await fetchR2ObjectAsBuffer(storagePath);
+    } catch (fetchErr) {
+      console.error(`[AI Extraction Fetch Fail] Material: ${materialId}`, fetchErr.message);
+      return res.status(502).json({
+        ok: false,
+        code: "R2_OBJECT_NOT_FOUND",
+        message: `Failed to retrieve PDF from private R2 storage. Ensure storagePath is valid: ${fetchErr.message}`
+      });
+    }
+
+    // Step 3: Perform PDF text extraction
+    try {
+      const extraction = await extractTextFromPdfBuffer(pdfBuffer, {
+        maxPdfChars: 20000 // Limit extraction buffer size for testing
+      });
+
+      if (!extraction.hasText) {
+        return res.status(422).json({
+          ok: false,
+          code: "PDF_TEXT_EMPTY",
+          message: "No indexable/parsable text was found inside this PDF. It may be scanned or image-only."
+        });
+      }
+
+      // Generate a limited preview of the extracted text (max 1000 characters)
+      const previewText = extraction.text.substring(0, 1000);
+
+      console.log(`[AI Extraction Success] Material: ${materialId}, Chars Extracted: ${extraction.extractedChars}, Pages: ${extraction.pageCount}`);
+
+      return res.json({
+        ok: true,
+        materialId,
+        title: material.title || "Untitled Study Material",
+        pageCount: extraction.pageCount,
+        extractedChars: extraction.extractedChars,
+        truncated: extraction.truncated,
+        previewText,
+        message: "PDF text extraction successful."
+      });
+    } catch (parseErr) {
+      console.error(`[AI Extraction Parse Fail] Material: ${materialId}`, parseErr.message);
+      return res.status(502).json({
+        ok: false,
+        code: "PDF_PARSE_FAILED",
+        message: `PDF text parser failed to compile or decode binary pages: ${parseErr.message}`
+      });
+    }
+
+  } catch (error) {
+    console.error('[AI Extraction Route Error]:', error);
+    return res.status(500).json({
+      ok: false,
+      code: "INTERNAL_ERROR",
+      message: "An internal server error occurred during PDF text extraction."
+    });
+  }
 });
 
 /**
