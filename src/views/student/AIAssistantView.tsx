@@ -49,6 +49,7 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
     stage?: string;
     retryable?: boolean;
     modelsAttempted?: string[];
+    quota?: any;
   }
 
   // PDF Extraction Quality States
@@ -67,9 +68,35 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
     extractedChars?: number;
     warnings?: string[];
     message?: string;
+    quota?: any;
   } | null>(null);
   const [aiError, setAiError] = useState<AIErrorObj | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
+  const [quota, setQuota] = useState<any | null>(null);
+
+  // Fetch quota on mount
+  useEffect(() => {
+    const fetchQuota = async () => {
+      try {
+        const token = await auth.currentUser?.getIdToken();
+        if (!token) return;
+        const response = await fetch(apiUrl("/api/ai/quota-status"), {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (data.ok && data.role === 'student') {
+          setQuota({
+            limits: data.limits,
+            used: data.used,
+            remaining: data.remaining
+          });
+        }
+      } catch (err) {
+        console.error("Quota fetch fail", err);
+      }
+    };
+    fetchQuota();
+  }, []);
 
   // Fetch quality metrics whenever a student selects a material
   useEffect(() => {
@@ -196,8 +223,17 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
           pageCount: data.pageCount,
           extractedChars: data.extractedChars,
           warnings: data.warnings || [],
-          message: data.message || ""
+          message: data.message || "",
+          quota: data.quota
         });
+        // Update quota
+        if (data.quota) {
+           setQuota(prev => ({
+             ...prev,
+             used: { ...prev?.used, [actionType]: data.quota.used },
+             remaining: { ...prev?.remaining, [actionType]: data.quota.remaining }
+           }));
+        }
       } else {
         throw {
           message: data?.message || "Academic AI generated an empty response.",
@@ -214,7 +250,8 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
         code: err.code || "CLIENT_ERROR",
         stage: err.stage || "unknown",
         retryable: err.retryable !== undefined ? err.retryable : false,
-        modelsAttempted: err.modelsAttempted || null
+        modelsAttempted: err.modelsAttempted || null,
+        quota: err.quota
       });
     } finally {
       setAiLoading(false);
@@ -697,12 +734,16 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
                     <span>
                     {aiError.code === "ACADEMIC_PROMPT_TOO_LONG" ? "Document Too Large for AI" : 
                      aiError.code === "CLIENT_PROMPT_TOO_LONG" ? "Prompt Size Limit Reached" :
+                     aiError.code === "DAILY_AI_LIMIT_REACHED" ? "Daily AI Limit Reached" :
                      aiError.code === "MODEL_NOT_AVAILABLE" ? "AI Model Temporarily Unavailable" : "Generation Blocked"}
                   </span>
                   </div>
                   <p className="text-xs text-red-200 leading-relaxed">
                     {aiError.code === "ACADEMIC_PROMPT_TOO_LONG" && (
                       "This PDF is too large for a single AI request. Please try a smaller material or split the PDF."
+                    )}
+                    {aiError.code === "DAILY_AI_LIMIT_REACHED" && aiError.quota && (
+                      `You have used all ${aiError.quota.limit} live generations for ${aiError.quota.action.replace('_', ' ')} today. Cached results are still free. Resets daily based on India time.`
                     )}
                     {aiError.code === "CLIENT_PROMPT_TOO_LONG" && (
                       "The request is too large for the current AI configuration."

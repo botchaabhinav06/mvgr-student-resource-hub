@@ -7,7 +7,7 @@ import { runGeminiTextPrompt, generateGeminiText, discoverGeminiModels, selectWo
 import { validateMaterialAccess } from '../ai/materialAccessHelper.js';
 import { fetchR2ObjectAsBuffer } from '../ai/r2InternalFetcher.js';
 import { extractTextFromPdfBuffer } from '../ai/pdfTextExtractor.js';
-import { generateAcademicAiOutput } from '../ai/academicAiService.js';
+import { generateAcademicAiOutput, getIndiaDateKey } from '../ai/academicAiService.js';
 
 const router = express.Router();
 
@@ -24,19 +24,44 @@ function isFacultyOrAdmin(userProfile) {
 }
 
 /**
- * GET /api/ai/health
- * Checks that the backend AI foundation is registered and active.
- * Auth-protected for higher security control.
+ * GET /api/ai/quota-status
+ * Checks the user's current AI daily quota status.
  */
-router.get('/health', verifyFirebaseToken, loadUserProfile, (req, res) => {
-  res.json({
-    ok: true,
-    aiModule: "enabled",
-    provider: aiConfig.provider,
-    hasProviderKey: aiConfig.hasGeminiKey,
-    features: aiConfig.plannedFeatures,
-    message: "AI backend foundation is ready. Academic AI features are planned."
-  });
+router.get('/quota-status', verifyFirebaseToken, loadUserProfile, async (req, res) => {
+  try {
+    const user = req.userProfile;
+    if (user.role !== 'student') {
+      return res.json({
+        ok: true,
+        role: user.role,
+        message: `${user.role === 'admin' ? 'Admin diagnostics' : 'Faculty AI generation tools'} are not counted against student AI quota.`
+      });
+    }
+
+    const dateKey = getIndiaDateKey();
+    const docRef = adminDb.collection('aiUsageDaily').doc(`${user.uid}_${dateKey}`);
+    const doc = await docRef.get();
+    
+    const used = doc.exists ? doc.data().used : { pdf_summary: 0, important_questions: 0 };
+    const limits = aiConfig.studentDailyLimits;
+    const remaining = {
+      pdf_summary: Math.max(0, limits.pdf_summary - used.pdf_summary),
+      important_questions: Math.max(0, limits.important_questions - used.important_questions)
+    };
+
+    res.json({
+      ok: true,
+      role: 'student',
+      dateKey,
+      timezone: 'Asia/Kolkata',
+      limits,
+      used,
+      remaining
+    });
+  } catch (err) {
+    console.error('[AI Quota Status Fail]', err);
+    res.status(500).json({ ok: false, message: 'Failed to fetch quota status.' });
+  }
 });
 
 /**

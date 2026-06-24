@@ -6,6 +6,83 @@ import { getGeminiClient, mapErrorToCategory, getFriendlyErrorMessage, generateG
 import { aiConfig } from './aiConfig.js';
 
 /**
+ * Returns YYYY-MM-DD in India timezone for quota tracking.
+ */
+export function getIndiaDateKey() {
+  const options = { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' };
+  const formatter = new Intl.DateTimeFormat('en-CA', options); // en-CA gives YYYY-MM-DD
+  return formatter.format(new Date());
+}
+
+/**
+ * Checks if user has quota remaining.
+ */
+async function checkQuota(uid, action, role) {
+  if (role !== 'student') return { allowed: true };
+  
+  const dateKey = getIndiaDateKey();
+  const docRef = adminDb.collection('aiUsageDaily').doc(`${uid}_${dateKey}`);
+  const doc = await docRef.get();
+  
+  const limit = aiConfig.studentDailyLimits[action] || 10;
+  let used = 0;
+  
+  if (doc.exists) {
+    used = doc.data().used[action] || 0;
+  }
+  
+  if (used >= limit) {
+    return { 
+      allowed: false, 
+      quota: { action, limit, used, remaining: 0, dateKey } 
+    };
+  }
+  
+  return { 
+    allowed: true, 
+    quota: { action, limit, used, remaining: limit - used, dateKey } 
+  };
+}
+
+/**
+ * Atomically increments quota.
+ */
+async function incrementQuota(uid, action) {
+  const dateKey = getIndiaDateKey();
+  const docRef = adminDb.collection('aiUsageDaily').doc(`${uid}_${dateKey}`);
+  
+  return await adminDb.runTransaction(async (transaction) => {
+    const doc = await transaction.get(docRef);
+    let data;
+    if (!doc.exists) {
+      data = {
+        uid,
+        role: 'student',
+        dateKey,
+        timezone: 'Asia/Kolkata',
+        limits: { ...aiConfig.studentDailyLimits },
+        used: { pdf_summary: 0, important_questions: 0 },
+        updatedAt: new Date()
+      };
+    } else {
+      data = doc.data();
+    }
+    
+    data.used[action] = (data.used[action] || 0) + 1;
+    data.updatedAt = new Date();
+    transaction.set(docRef, data, { merge: true });
+    
+    return { 
+      action,
+      limit: aiConfig.studentDailyLimits[action],
+      used: data.used[action],
+      remaining: aiConfig.studentDailyLimits[action] - data.used[action],
+      dateKey 
+    };
+  });
+}
+
+/**
  * Executes a Gemini model query with custom fallback logic for academic generations.
  * Proxies to the shared generateGeminiText function to guarantee model alignment and fallback resilience.
  * 
@@ -281,6 +358,20 @@ export async function generateAcademicAiOutput(userProfile, materialId, action) 
   // 6. Build Prompt & Call Gemini
   const prepared = prepareAcademicTextForPrompt(extraction.text, action);
   const textForPrompt = prepared.textForPrompt;
+  
+  // Check quota
+  const quotaCheck = await checkQuota(userProfile.uid, action, userProfile.role);
+  if (!quotaCheck.allowed) {
+    throw {
+      status: 429,
+      code: "DAILY_AI_LIMIT_REACHED",
+      message: "You have reached your daily AI generation limit for this feature. Please try again tomorrow.",
+      retryable: false,
+      stage: "quota_guard",
+      quota: quotaCheck.quota
+    };
+  }
+
   let promptText = "";
   if (action === 'pdf_summary') {
     promptText = `
@@ -455,6 +546,9 @@ ${textForPrompt}
     status: 'success'
   });
 
+  // Increment quota
+  const quotaResult = await incrementQuota(userProfile.uid, action);
+
   return {
     ok: true,
     action,
@@ -466,6 +560,7 @@ ${textForPrompt}
     modelUsed: aiResult.modelUsed || null,
     quality: quality || { qualityStatus: "good", aiUsable: true },
     warnings: [],
-    message: "AI output generated successfully."
+    message: "AI output generated successfully.",
+    quota: quotaResult
   };
 }

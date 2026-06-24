@@ -10,10 +10,15 @@ export const aiConfig = {
   defaultModel: process.env.GEMINI_MODEL || "gemini-3.1-flash-lite",
   fallbackModels: ["gemini-3.5-flash"],
   
-  // Quotas for different user roles
-  studentDailyLimit: 5,
+  // Specific student daily limits for academic AI actions
+  studentDailyLimits: {
+    pdf_summary: 10,
+    important_questions: 10
+  },
+  
   facultyDailyLimit: 10,
   adminDailyLimit: 20,
+  adminDiagnosticsLimit: null, // unlimited
   
   // Safety crop limits for smoke-test input size to prevent denial of service or abuse.
   maxPromptChars: 200,
