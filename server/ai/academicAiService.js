@@ -2,78 +2,26 @@ import { adminDb } from '../firebaseAdmin.js';
 import { validateMaterialAccess } from './materialAccessHelper.js';
 import { fetchR2ObjectAsBuffer } from './r2InternalFetcher.js';
 import { extractTextFromPdfBuffer } from './pdfTextExtractor.js';
-import { getGeminiClient, mapErrorToCategory, getFriendlyErrorMessage } from './geminiProvider.js';
+import { getGeminiClient, mapErrorToCategory, getFriendlyErrorMessage, generateGeminiText } from './geminiProvider.js';
 import { aiConfig } from './aiConfig.js';
 
 /**
  * Executes a Gemini model query with custom fallback logic for academic generations.
+ * Proxies to the shared generateGeminiText function to guarantee model alignment and fallback resilience.
  * 
  * @param {string} promptText - Bounded prompt text.
  * @returns {Promise<Object>} Object with response text and model used.
  */
 async function runAcademicGeminiCall(promptText) {
-  const client = getGeminiClient();
-  if (!client) {
-    const err = new Error("AI is not configured on the backend yet.");
-    err.code = "GEMINI_API_KEY_MISSING";
-    throw err;
-  }
-
-  // Build ordered list of models to try
-  const modelsToTry = [];
-  if (process.env.GEMINI_MODEL) {
-    modelsToTry.push(process.env.GEMINI_MODEL);
-  }
-  const standardFallbacks = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
-  for (const model of standardFallbacks) {
-    if (!modelsToTry.includes(model)) {
-      modelsToTry.push(model);
-    }
-  }
-
-  let lastError = null;
-
-  for (const modelId of modelsToTry) {
-    try {
-      console.log(`[Academic AI Service] Attempting academic prompt with model: ${modelId}`);
-      const response = await client.models.generateContent({
-        model: modelId,
-        contents: promptText,
-        config: {
-          systemInstruction: "You are an elite, objective academic assistant. You strictly adhere to academic integrity, and use ONLY the provided source text to construct your answer. Do not introduce outside information or make assumptions.",
-          temperature: 0.15
-        }
-      });
-
-      if (response && response.text) {
-        return {
-          text: response.text,
-          modelUsed: modelId
-        };
-      }
-      throw new Error("Empty text response from Gemini provider.");
-    } catch (error) {
-      console.warn(`[Academic AI Service Warn] Model ${modelId} failed:`, error.message);
-      lastError = error;
-      const errorType = mapErrorToCategory(error);
-      
-      // Stop immediately for credentials or quota issues
-      if (
-        errorType === "MISSING_API_KEY" ||
-        errorType === "INVALID_API_KEY_OR_PERMISSION" ||
-        errorType === "PROVIDER_QUOTA_EXCEEDED"
-      ) {
-        const err = new Error(error.message || "Credential or Quota error.");
-        err.code = errorType;
-        throw err;
-      }
-    }
-  }
-
-  const cat = mapErrorToCategory(lastError);
-  const err = new Error(lastError?.message || "All fallback models failed.");
-  err.code = cat;
-  throw err;
+  const result = await generateGeminiText({
+    prompt: promptText,
+    purpose: "academic_generation",
+    maxOutputTokens: 3000
+  });
+  return {
+    text: result.text,
+    modelUsed: result.modelUsed
+  };
 }
 
 /**

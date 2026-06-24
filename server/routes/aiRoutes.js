@@ -3,7 +3,7 @@ import { adminDb } from '../firebaseAdmin.js';
 import { verifyFirebaseToken } from '../middleware/verifyFirebaseToken.js';
 import { loadUserProfile } from '../middleware/loadUserProfile.js';
 import { aiConfig } from '../ai/aiConfig.js';
-import { runGeminiTextPrompt } from '../ai/geminiProvider.js';
+import { runGeminiTextPrompt, generateGeminiText } from '../ai/geminiProvider.js';
 import { validateMaterialAccess } from '../ai/materialAccessHelper.js';
 import { fetchR2ObjectAsBuffer } from '../ai/r2InternalFetcher.js';
 import { extractTextFromPdfBuffer } from '../ai/pdfTextExtractor.js';
@@ -319,7 +319,8 @@ router.post('/material-summary', verifyFirebaseToken, loadUserProfile, async (re
       message: err.message || "An internal error occurred during summary generation.",
       retryable: err.retryable !== undefined ? err.retryable : false,
       stage: err.stage || "provider_generation",
-      quality: err.quality || null
+      quality: err.quality || null,
+      modelsAttempted: err.modelsAttempted || null
     });
   }
 });
@@ -352,7 +353,8 @@ router.post('/important-questions', verifyFirebaseToken, loadUserProfile, async 
       message: err.message || "An internal error occurred during questions generation.",
       retryable: err.retryable !== undefined ? err.retryable : false,
       stage: err.stage || "provider_generation",
-      quality: err.quality || null
+      quality: err.quality || null,
+      modelsAttempted: err.modelsAttempted || null
     });
   }
 });
@@ -433,6 +435,65 @@ router.get('/models-diagnostic', verifyFirebaseToken, loadUserProfile, (req, res
     res.status(500).json({
       ok: false,
       message: "An error occurred retrieving AI diagnostics info."
+    });
+  }
+});
+
+/**
+ * POST /api/ai/model-generate-diagnostic
+ * Runs the shared generateGeminiText function with a static prompt to verify models.
+ * Strictly restricted to active Administrators only.
+ */
+router.post('/model-generate-diagnostic', verifyFirebaseToken, loadUserProfile, async (req, res) => {
+  try {
+    if (!isAdmin(req.userProfile)) {
+      return res.status(403).json({
+        ok: false,
+        message: "Only active administrators can execute the model generate diagnostic."
+      });
+    }
+
+    if (!aiConfig.hasGeminiKey) {
+      return res.status(200).json({
+        ok: false,
+        message: "Gemini API key is not configured on the backend."
+      });
+    }
+
+    const testPrompt = "Reply with exactly: model diagnostic ok.";
+
+    const result = await generateGeminiText({
+      prompt: testPrompt,
+      purpose: "smoke-test",
+      maxOutputTokens: 50
+    });
+
+    if (result.ok) {
+      return res.json({
+        ok: true,
+        message: "AI model generate diagnostic successful.",
+        response: result.text ? result.text.trim() : null,
+        modelUsed: result.modelUsed
+      });
+    } else {
+      return res.status(502).json({
+        ok: false,
+        message: "Failed to communicate with Gemini AI."
+      });
+    }
+  } catch (error) {
+    console.error('[AI Model Diagnostic Error]:', error);
+    const code = error.code || "INTERNAL_ERROR";
+    const status = (code === "PROVIDER_RATE_LIMIT" || code === "PROVIDER_QUOTA_EXCEEDED") ? 429 
+                 : (code === "PROVIDER_HIGH_DEMAND" || code === "GEMINI_API_KEY_MISSING") ? 503 
+                 : 502;
+    return res.status(status).json({
+      ok: false,
+      code,
+      message: error.message || "An internal server error occurred during the model generate diagnostic.",
+      retryable: error.retryable !== undefined ? error.retryable : false,
+      stage: error.stage || "provider_generation",
+      modelsAttempted: error.modelsAttempted || []
     });
   }
 });

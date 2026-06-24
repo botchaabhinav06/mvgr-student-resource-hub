@@ -690,7 +690,7 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
                 <div className="p-4 bg-red-950/20 border border-red-900/30 rounded-xl space-y-3">
                   <div className="flex items-center gap-2 text-red-400 font-mono text-xs font-bold uppercase">
                     <AlertTriangle className="w-4 h-4" />
-                    <span>Generation Blocked</span>
+                    <span>{aiError.code === "MODEL_NOT_AVAILABLE" ? "AI Model Temporarily Unavailable" : "Generation Blocked"}</span>
                   </div>
                   <p className="text-xs text-red-200 leading-relaxed">
                     {aiError.code === "PROVIDER_HIGH_DEMAND" && (
@@ -708,7 +708,10 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
                     {aiError.code === "PDF_TEXT_NOT_AI_USABLE" && (
                       "This PDF lacks indexable text layer structure. Please select a text-based document or contact your instructor."
                     )}
-                    {!["PROVIDER_HIGH_DEMAND", "PROVIDER_RATE_LIMIT", "PROVIDER_QUOTA_EXCEEDED", "GEMINI_API_KEY_MISSING", "PDF_TEXT_NOT_AI_USABLE"].includes(aiError.code || "") && (
+                    {aiError.code === "MODEL_NOT_AVAILABLE" && (
+                      "Text generation is temporarily unavailable. Please try again after a few minutes."
+                    )}
+                    {!["PROVIDER_HIGH_DEMAND", "PROVIDER_RATE_LIMIT", "PROVIDER_QUOTA_EXCEEDED", "GEMINI_API_KEY_MISSING", "PDF_TEXT_NOT_AI_USABLE", "MODEL_NOT_AVAILABLE"].includes(aiError.code || "") && (
                       aiError.message
                     )}
                   </p>

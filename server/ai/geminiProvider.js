@@ -140,50 +140,77 @@ export function getFriendlyErrorMessage(category, rawMessage) {
 
 /**
  * Runs a protected, size-limited text prompt via the Gemini client with a fallback model try-catch loop.
- * Sanitizes outputs and safely traps runtime provider exceptions.
+ * Designed for short interactive inputs, smoke tests, and academic summary/questions generation.
+ * @param {Object} params
+ * @param {string} params.prompt
+ * @param {string} [params.purpose]
+ * @param {number} [params.maxOutputTokens]
+ * @returns {Promise<Object>} Object with ok, text, and modelUsed.
  */
-export async function runGeminiTextPrompt({ prompt }) {
+export async function generateGeminiText({ prompt, purpose, maxOutputTokens }) {
   if (!prompt || typeof prompt !== 'string') {
-    return {
-      ok: false,
-      message: 'Invalid prompt input.'
-    };
+    const err = new Error('Invalid prompt input.');
+    err.code = "CLIENT_ERROR";
+    err.stage = "provider_generation";
+    err.retryable = false;
+    throw err;
   }
 
   const trimmedPrompt = prompt.trim();
-  if (trimmedPrompt.length > aiConfig.maxPromptChars) {
-    return {
-      ok: false,
-      message: `Prompt length exceeds maximum allowed character count of ${aiConfig.maxPromptChars}.`
-    };
+  const maxLimit = aiConfig.maxPromptChars || 25000;
+  if (trimmedPrompt.length > maxLimit) {
+    const err = new Error(`Prompt length exceeds maximum allowed character count of ${maxLimit}.`);
+    err.code = "CLIENT_ERROR";
+    err.stage = "provider_generation";
+    err.retryable = false;
+    throw err;
   }
 
   const client = getGeminiClient();
   if (!client) {
-    return {
-      ok: false,
-      message: 'Gemini API key is not configured on the backend.',
-      errorType: 'MISSING_API_KEY'
-    };
+    const err = new Error("AI is not configured on the backend yet.");
+    err.code = "GEMINI_API_KEY_MISSING";
+    err.stage = "provider_configuration";
+    err.retryable = false;
+    throw err;
   }
 
-  // Construct our unique ordered list of models to try (default model, then other fallbacks)
-  const modelsToTry = [aiConfig.defaultModel];
-  for (const model of aiConfig.fallbackModels) {
-    if (!modelsToTry.includes(model)) {
-      modelsToTry.push(model);
+  // Construct conservative fallback model list
+  const modelsToTry = [];
+  if (process.env.GEMINI_MODEL) {
+    const envModel = String(process.env.GEMINI_MODEL).trim();
+    if (envModel) {
+      modelsToTry.push(envModel);
+    }
+  }
+  const standardFallbacks = [
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash"
+  ];
+  for (const m of standardFallbacks) {
+    if (m && !modelsToTry.includes(m)) {
+      modelsToTry.push(m);
     }
   }
 
   let lastError = null;
-  let successfulModel = null;
+  const modelsAttempted = [];
 
   for (const modelId of modelsToTry) {
     try {
-      console.log(`[Gemini Provider] Attempting generation with model: ${modelId}`);
+      console.log(`[Gemini Provider Shared] Attempting generation with model: ${modelId} for purpose: ${purpose || 'general'}`);
+      modelsAttempted.push(modelId);
+
+      const configObj = {};
+      if (maxOutputTokens) configObj.maxOutputTokens = maxOutputTokens;
+      configObj.temperature = purpose === "smoke-test" ? 0.2 : 0.3;
+
       const response = await client.models.generateContent({
         model: modelId,
         contents: trimmedPrompt,
+        config: configObj
       });
 
       if (response && response.text) {
@@ -195,23 +222,54 @@ export async function runGeminiTextPrompt({ prompt }) {
       }
       throw new Error("Empty text response from Gemini provider.");
     } catch (error) {
-      console.warn(`[Gemini Provider Warn] Model ${modelId} failed:`, error.message);
+      console.warn(`[Gemini Provider Shared Warn] Model ${modelId} failed:`, error.message);
       lastError = error;
       const errorType = mapErrorToCategory(error);
-      // If error indicates key credentials issue, break early instead of spinning fallbacks
-      if (errorType === "MISSING_API_KEY" || errorType === "INVALID_API_KEY_OR_PERMISSION") {
-        break;
+
+      // Stop immediately for credentials or quota issues
+      if (
+        errorType === "MISSING_API_KEY" ||
+        errorType === "INVALID_API_KEY_OR_PERMISSION" ||
+        errorType === "PROVIDER_QUOTA_EXCEEDED"
+      ) {
+        const friendlyMessage = getFriendlyErrorMessage(errorType, error.message);
+        const err = new Error(friendlyMessage);
+        err.code = errorType;
+        err.stage = "provider_generation";
+        err.retryable = false;
+        err.modelsAttempted = modelsAttempted;
+        throw err;
       }
     }
   }
 
-  // If we get here, all model attempts failed
-  const errorType = mapErrorToCategory(lastError);
-  console.error('[Gemini Provider Error] All attempted models failed. Last error:', lastError?.message);
+  // All fallback models failed
+  const finalErrorType = "MODEL_NOT_AVAILABLE";
+  const err = new Error("AI text generation is temporarily unavailable. Please try again later.");
+  err.code = finalErrorType;
+  err.stage = "provider_generation";
+  err.retryable = true;
+  err.modelsAttempted = modelsAttempted;
+  throw err;
+}
 
-  return {
-    ok: false,
-    message: getFriendlyErrorMessage(errorType, lastError?.message),
-    errorType
-  };
+/**
+ * Runs a protected, size-limited text prompt via the Gemini client with a fallback model try-catch loop.
+ * Sanitizes outputs and safely traps runtime provider exceptions. This serves as a compatibility wrapper.
+ */
+export async function runGeminiTextPrompt({ prompt }) {
+  try {
+    const res = await generateGeminiText({ prompt, purpose: "smoke-test" });
+    return {
+      ok: true,
+      text: res.text,
+      modelUsed: res.modelUsed
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      message: err.message,
+      errorType: err.code || "PROVIDER_REQUEST_FAILED"
+    };
+  }
 }
