@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutDashboard, UploadCloud, FolderHeart, ShieldAlert, BarChart3, UserCheck, LogOut, X, Box, BookOpen } from "lucide-react";
+import { LayoutDashboard, UploadCloud, FolderHeart, ShieldAlert, BarChart3, UserCheck, LogOut, X, Box, BookOpen, Sparkles, Shield } from "lucide-react";
 import { ActiveScreen, FacultyProfile } from "../types";
 
 interface FacultySidebarProps {
@@ -46,6 +46,11 @@ export const FacultySidebar: React.FC<FacultySidebarProps> = ({
       screen: "FACULTY_REPORTS" as ActiveScreen,
     },
     {
+      label: "AI Tools",
+      icon: Sparkles,
+      screen: "FACULTY_AI_TOOLS" as ActiveScreen,
+    },
+    {
       label: "Profile Settings",
       icon: UserCheck,
       screen: "FACULTY_PROFILE" as ActiveScreen,
@@ -56,6 +61,11 @@ export const FacultySidebar: React.FC<FacultySidebarProps> = ({
             label: "User Management",
             icon: UserCheck,
             screen: "ADMIN_USERS" as ActiveScreen,
+          },
+          {
+            label: "AI Control",
+            icon: Shield,
+            screen: "ADMIN_AI_CONTROL" as ActiveScreen,
           },
         ]
       : []),

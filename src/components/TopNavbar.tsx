@@ -43,6 +43,8 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
         return "My Reports";
       case "STUDENT_PROFILE":
         return "Student Profile Profile Card";
+      case "STUDENT_AI_ASSISTANT":
+        return "AI Study Assistant Workspace";
       case "FACULTY_DASHBOARD":
         return "Faculty Management Command";
       case "FACULTY_UPLOAD":
@@ -55,6 +57,12 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
         return "Student Reports Center";
       case "FACULTY_PROFILE":
         return "Faculty Account Configuration";
+      case "FACULTY_AI_TOOLS":
+        return "Staff AI Productivity Tools";
+      case "ADMIN_USERS":
+        return "User Management Portal";
+      case "ADMIN_AI_CONTROL":
+        return "AI Feature Flags & Governance";
       default:
         return "Academic Resource System";
     }

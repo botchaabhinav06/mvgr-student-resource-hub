@@ -3,6 +3,7 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import r2Routes from './routes/r2Routes.js';
 import adminNormalizationRoutes from './routes/adminNormalizationRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 import { isConfigured } from './firebaseAdmin.js';
 
 const PORT = 3000;
@@ -51,6 +52,9 @@ async function startServer() {
 
   // Mount Admin Normalization routes
   app.use('/api/admin/normalization', adminNormalizationRoutes);
+
+  // Mount AI features routing backend backplane
+  app.use('/api/ai', aiRoutes);
 
   // Safe root route check
   app.get('/', (req, res) => {

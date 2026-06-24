@@ -27,6 +27,7 @@ import { BrowseView as StudentBrowse } from "./views/student/BrowseView";
 import { ReportsView as StudentReports } from "./views/student/ReportsView";
 import { ProfileView as StudentProfileView } from "./views/student/ProfileView";
 import { QuestionPapersView as StudentQuestionPapers } from "./views/student/QuestionPapersView";
+import { AIAssistantView } from "./views/student/AIAssistantView";
 
 // Views faculty layout
 import { DashboardView as FacultyDashboard } from "./views/faculty/DashboardView";
@@ -35,7 +36,9 @@ import { ManageView as FacultyManage } from "./views/faculty/ManageView";
 import { QuestionPapersView as FacultyQuestionPapers } from "./views/faculty/QuestionPapersView";
 import { ReportsView as FacultyReports } from "./views/faculty/ReportsView";
 import { ProfileView as FacultyProfileView } from "./views/faculty/ProfileView";
+import { FacultyAIToolsView } from "./views/faculty/FacultyAIToolsView";
 import { AdminUserManagement } from "./views/admin/AdminUserManagement";
+import { AdminAIControlView } from "./views/admin/AdminAIControlView";
 import { R2TestView } from "./views/R2TestView";
 
 const mapFirestoreUser = (uid: string, data: any): StudentProfile | FacultyProfile => {
@@ -306,7 +309,7 @@ export default function App() {
     const path = activeScreen;
     if (currentUser.role === "student" && !path.startsWith("STUDENT_")) {
       setActiveScreen("STUDENT_DASHBOARD");
-    } else if (currentUser.role === "admin" && path !== "ADMIN_USERS" && !path.startsWith("FACULTY_")) {
+    } else if (currentUser.role === "admin" && path !== "ADMIN_USERS" && path !== "ADMIN_AI_CONTROL" && !path.startsWith("FACULTY_")) {
       setActiveScreen("FACULTY_DASHBOARD");
     } else if (currentUser.role === "faculty" && !path.startsWith("FACULTY_")) {
       setActiveScreen("FACULTY_DASHBOARD");
@@ -870,6 +873,13 @@ export default function App() {
               onUpdateUser={(updated) => setCurrentUser(updated)}
             />
           );
+        case "STUDENT_AI_ASSISTANT":
+          return (
+            <AIAssistantView
+              user={currentUser as StudentProfile}
+              materials={materials}
+            />
+          );
         default:
           return <p className="text-slate-400">View Not Configured</p>;
       }
@@ -959,8 +969,17 @@ export default function App() {
               materialsCount={materials.filter((m) => m.uploadedBy === (currentUser as FacultyProfile).facultyId).length}
             />
           );
+        case "FACULTY_AI_TOOLS":
+          return (
+            <FacultyAIToolsView
+              user={currentUser as FacultyProfile}
+              materials={materials}
+            />
+          );
         case "ADMIN_USERS":
           return <AdminUserManagement />;
+        case "ADMIN_AI_CONTROL":
+          return <AdminAIControlView />;
         default:
           return <p className="text-slate-400">View Not Configured</p>;
       }
