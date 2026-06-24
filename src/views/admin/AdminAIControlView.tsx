@@ -1,7 +1,115 @@
-import React from "react";
-import { Sparkles, Shield, ToggleLeft, Sliders, Activity, Key, Database, AlertCircle, RefreshCw, Layers } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Sparkles, Shield, ToggleLeft, Sliders, Activity, Key, Database, AlertCircle, RefreshCw, Layers, CheckCircle2, XCircle, Play, Loader2 } from "lucide-react";
+import { auth } from "../../firebase/firebaseConfig";
+import { apiUrl } from "../../lib/apiBase";
 
 export const AdminAIControlView: React.FC = () => {
+  // AI Health Check States
+  const [healthStatus, setHealthStatus] = useState<"unchecked" | "checking" | "success" | "failed">("unchecked");
+  const [healthData, setHealthData] = useState<any | null>(null);
+  const [healthError, setHealthError] = useState<string | null>(null);
+
+  // AI Smoke Test States
+  const [smokeStatus, setSmokeStatus] = useState<"not_tested" | "testing" | "success" | "failed">("not_tested");
+  const [smokeResult, setSmokeResult] = useState<string | null>(null);
+  const [smokeError, setSmokeError] = useState<string | null>(null);
+
+  // Trigger health check on load
+  useEffect(() => {
+    handleCheckHealth();
+  }, []);
+
+  const handleCheckHealth = async () => {
+    setHealthStatus("checking");
+    setHealthError(null);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) {
+        throw new Error("Unable to retrieve authorization token. Please log in again.");
+      }
+
+      const response = await fetch(apiUrl("/api/ai/health"), {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error("Only active administrators are authorized to fetch AI health telemetry.");
+        }
+        throw new Error(`Server responded with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data && data.ok) {
+        setHealthData(data);
+        setHealthStatus("success");
+      } else {
+        throw new Error(data?.message || "Invalid response structure from AI health endpoint.");
+      }
+    } catch (err: any) {
+      console.error("[AI Health Check Error]:", err);
+      setHealthStatus("failed");
+      setHealthError(err.message || "Unable to reach AI backend server.");
+    }
+  };
+
+  const handleRunSmokeTest = async () => {
+    setSmokeStatus("testing");
+    setSmokeError(null);
+    setSmokeResult(null);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) {
+        throw new Error("Authorization credentials missing. Please sign in again.");
+      }
+
+      const response = await fetch(apiUrl("/api/ai/smoke-test"), {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error("Only active administrators are authorized to execute the AI smoke test.");
+        }
+        if (response.status === 502) {
+          throw new Error("Backend reached Gemini, but the provider returned an error. Check model name and API key validity.");
+        }
+        throw new Error(data?.message || `Server connectivity test failed with status ${response.status}`);
+      }
+
+      if (data && data.ok) {
+        setSmokeResult(data.response || "No response content.");
+        setSmokeStatus("success");
+      } else {
+        // Handle gracefully if missing key reported in a successful 200/OK response or payload
+        if (data?.message && data.message.includes("not configured")) {
+          throw new Error("Gemini API key is not configured on the backend. Add GEMINI_API_KEY in Render and redeploy.");
+        }
+        throw new Error(data?.message || "AI connectivity test returned failure status.");
+      }
+    } catch (err: any) {
+      console.error("[AI Smoke Test Error]:", err);
+      setSmokeStatus("failed");
+      
+      const msg = err.message || "";
+      if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+        setSmokeError("Unable to reach AI backend. Check Render deployment and backend logs.");
+      } else {
+        setSmokeError(msg);
+      }
+    }
+  };
+
   const globalToggles = [
     { id: "summary", name: "PDF Summarizer", active: true, phase: "Phase 13.2" },
     { id: "questions", name: "Important Questions Generator", active: true, phase: "Phase 13.2" },
@@ -174,6 +282,149 @@ export const AdminAIControlView: React.FC = () => {
         {/* Right column Limits and Metrics */}
         <div className="space-y-6">
           
+          {/* AI Backend Smoke Test & Health Check Panel */}
+          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-cyber-cyan" />
+                <h3 className="text-xs font-mono font-extrabold text-slate-300 uppercase tracking-widest">
+                  AI Backend Smoke Test
+                </h3>
+              </div>
+              <span className="px-2 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wider bg-cyan-500/10 text-cyber-cyan border border-cyan-500/20 rounded">
+                DevOps
+              </span>
+            </div>
+
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              Verify that the backend-only Gemini connection is configured correctly using secure server-side proxies.
+            </p>
+
+            {/* Config metadata fields */}
+            <div className="space-y-2 p-3 rounded-lg bg-slate-950 border border-slate-850 text-[10px] font-mono">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Provider:</span>
+                <span className="text-slate-300 font-bold uppercase">Gemini</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Key Location:</span>
+                <span className="text-emerald-400 font-bold">Render Secret Env</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Smoke Endpoint:</span>
+                <span className="text-slate-300">/api/ai/smoke-test</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Health Endpoint:</span>
+                <span className="text-slate-300">/api/ai/health</span>
+              </div>
+              <div className="flex justify-between border-t border-slate-900 pt-2 mt-2">
+                <span className="text-slate-500">Health Status:</span>
+                {healthStatus === "checking" ? (
+                  <span className="text-amber-400 flex items-center gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin" /> Querying...
+                  </span>
+                ) : healthStatus === "success" ? (
+                  <span className="text-emerald-400 flex items-center gap-1 font-bold">
+                    <CheckCircle2 className="w-3 h-3" /> ACTIVE {healthData?.hasProviderKey ? "(Key Set)" : "(No Key)"}
+                  </span>
+                ) : healthStatus === "failed" ? (
+                  <span className="text-red-400 flex items-center gap-1 font-bold">
+                    <XCircle className="w-3 h-3" /> OFFLINE
+                  </span>
+                ) : (
+                  <span className="text-slate-500">NOT CHECKED</span>
+                )}
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Smoke Result:</span>
+                {smokeStatus === "testing" ? (
+                  <span className="text-amber-400 flex items-center gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin" /> Testing...
+                  </span>
+                ) : smokeStatus === "success" ? (
+                  <span className="text-emerald-400 flex items-center gap-1 font-bold">
+                    <CheckCircle2 className="w-3 h-3" /> SUCCESS
+                  </span>
+                ) : smokeStatus === "failed" ? (
+                  <span className="text-red-400 flex items-center gap-1 font-bold">
+                    <XCircle className="w-3 h-3" /> FAILED
+                  </span>
+                ) : (
+                  <span className="text-slate-500">NOT TESTED</span>
+                )}
+              </div>
+            </div>
+
+            {/* Success Results / Error Display Panel */}
+            {(smokeResult || smokeError || healthError) && (
+              <div className="p-3.5 rounded-xl border text-[11px] leading-relaxed transition-all duration-300 animate-in fade-in slide-in-from-top-1 bg-slate-950">
+                {smokeResult && (
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] uppercase font-mono font-bold text-emerald-400 tracking-wider">
+                      ★ Gemini Response Received:
+                    </div>
+                    <p className="text-slate-200 font-mono p-2 bg-slate-900 rounded border border-slate-850">
+                      "{smokeResult}"
+                    </p>
+                    <p className="text-[10px] text-slate-500 italic mt-1">
+                      AI backend configured successfully.
+                    </p>
+                  </div>
+                )}
+                {smokeError && (
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] uppercase font-mono font-bold text-red-400 tracking-wider flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" /> Smoke Test Error:
+                    </div>
+                    <p className="text-slate-300 bg-red-500/5 p-2 rounded border border-red-500/10 font-mono">
+                      {smokeError}
+                    </p>
+                  </div>
+                )}
+                {healthError && (
+                  <div className="space-y-1.5 mt-2 pt-2 border-t border-slate-900">
+                    <div className="text-[10px] uppercase font-mono font-bold text-red-400 tracking-wider flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" /> Health Fetch Error:
+                    </div>
+                    <p className="text-slate-300 bg-red-500/5 p-2 rounded border border-red-500/10 font-mono">
+                      {healthError}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <button
+                onClick={handleCheckHealth}
+                disabled={healthStatus === "checking"}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-slate-800 bg-slate-950 hover:bg-slate-900 text-xs font-semibold text-slate-300 hover:text-slate-100 transition duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {healthStatus === "checking" ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-3.5 h-3.5" />
+                )}
+                Check AI Health
+              </button>
+
+              <button
+                onClick={handleRunSmokeTest}
+                disabled={smokeStatus === "testing"}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-cyber-cyan hover:bg-cyan-400 text-xs font-bold text-slate-950 transition duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {smokeStatus === "testing" ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                )}
+                Test AI Backend
+              </button>
+            </div>
+          </div>
+
           {/* Rate Limits */}
           <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
             <div className="flex items-center gap-2">
