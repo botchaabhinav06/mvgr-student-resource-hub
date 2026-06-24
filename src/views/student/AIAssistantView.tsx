@@ -37,10 +37,16 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
   const [selectedMaterialId, setSelectedMaterialId] = useState<string>("");
   const selectedMaterial = filteredMaterials.find((m) => m.id === selectedMaterialId);
 
+  interface QualityErrorObj {
+    message: string;
+    code?: string;
+    stage?: string;
+  }
+
   // PDF Extraction Quality States
   const [qualityLoading, setQualityLoading] = useState<boolean>(false);
   const [qualityData, setQualityData] = useState<any | null>(null);
-  const [qualityError, setQualityError] = useState<string | null>(null);
+  const [qualityError, setQualityError] = useState<QualityErrorObj | null>(null);
 
   // AI Generation States
   const [aiLoading, setAiLoading] = useState<boolean>(false);
@@ -91,17 +97,30 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
 
         const data = await response.json();
         if (!response.ok) {
-          throw new Error(data?.message || `Quality verification failed with status ${response.status}`);
+          setQualityError({
+            message: data?.message || `Quality verification failed with status ${response.status}`,
+            code: data?.code || "HTTP_ERROR",
+            stage: data?.stage || "unknown"
+          });
+          return;
         }
 
         if (data && data.ok) {
           setQualityData(data.quality);
         } else {
-          throw new Error(data?.message || "Failed to retrieve text quality profile.");
+          setQualityError({
+            message: data?.message || "Failed to retrieve text quality profile.",
+            code: data?.code || "UNEXPECTED_RESPONSE",
+            stage: data?.stage || "unknown"
+          });
         }
       } catch (err: any) {
         console.error("[Quality Retrieval Fail]:", err);
-        setQualityError(err.message || "Unable to retrieve PDF text quality statistics.");
+        setQualityError({
+          message: err.message || "Unable to retrieve PDF text quality statistics.",
+          code: "CLIENT_ERROR",
+          stage: "unknown"
+        });
       } finally {
         setQualityLoading(false);
       }
@@ -433,9 +452,30 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
                   </p>
                 </div>
               ) : qualityError ? (
-                <div className="p-3 bg-red-950/20 border border-red-900/30 rounded-lg flex items-start gap-2">
-                  <XCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                  <p className="text-[11px] text-red-200 leading-relaxed">{qualityError}</p>
+                <div className="p-3.5 bg-red-950/20 border border-red-900/30 rounded-lg space-y-2">
+                  <div className="flex items-start gap-2">
+                    <XCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-xs font-bold text-red-400 uppercase tracking-wide">
+                        Readiness Guard Error
+                      </h4>
+                      <p className="text-[11px] text-red-200 mt-1 leading-relaxed">
+                        {qualityError.message}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Safe debug diagnostic panel */}
+                  <div className="mt-2 p-2 bg-slate-950 rounded border border-slate-850/50 text-[10px] font-mono space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 uppercase">Stage:</span>
+                      <span className="text-amber-400/90 font-bold uppercase">{qualityError.stage || "UNKNOWN"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 uppercase">Error Code:</span>
+                      <span className="text-red-400/90 font-bold font-mono">{qualityError.code || "UNKNOWN"}</span>
+                    </div>
+                  </div>
                 </div>
               ) : qualityData ? (
                 <div className="space-y-4 animate-in fade-in duration-300">

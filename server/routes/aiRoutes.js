@@ -1,4 +1,5 @@
 import express from 'express';
+import { adminDb } from '../firebaseAdmin.js';
 import { verifyFirebaseToken } from '../middleware/verifyFirebaseToken.js';
 import { loadUserProfile } from '../middleware/loadUserProfile.js';
 import { aiConfig } from '../ai/aiConfig.js';
@@ -152,7 +153,8 @@ router.post('/material-quality', verifyFirebaseToken, loadUserProfile, async (re
       return res.status(400).json({
         ok: false,
         code: "MISSING_MATERIAL_ID",
-        message: "Missing required parameter 'materialId' in request body."
+        message: "Missing required parameter 'materialId' in request body.",
+        stage: "material_lookup"
       });
     }
 
@@ -170,7 +172,8 @@ router.post('/material-quality', verifyFirebaseToken, loadUserProfile, async (re
       return res.status(status).json({
         ok: false,
         code: accessResult.code,
-        message: accessResult.message || "Access denied."
+        message: accessResult.message || "Access denied.",
+        stage: "access_validation"
       });
     }
 
@@ -232,7 +235,8 @@ router.post('/material-quality', verifyFirebaseToken, loadUserProfile, async (re
       return res.status(404).json({
         ok: false,
         code: "R2_OBJECT_NOT_FOUND",
-        message: `Failed to fetch PDF resource from Cloudflare R2: ${fetchErr.message}`
+        message: `Failed to fetch PDF resource from Cloudflare R2: ${fetchErr.message}`,
+        stage: "r2_fetch"
       });
     }
 
@@ -246,7 +250,8 @@ router.post('/material-quality', verifyFirebaseToken, loadUserProfile, async (re
       return res.status(422).json({
         ok: false,
         code: "PDF_PARSE_FAILED",
-        message: `Failed to parse PDF binary content: ${parseErr.message}`
+        message: `Failed to parse PDF binary content: ${parseErr.message}`,
+        stage: "pdf_extract"
       });
     }
 
@@ -254,7 +259,8 @@ router.post('/material-quality', verifyFirebaseToken, loadUserProfile, async (re
       return res.status(422).json({
         ok: false,
         code: "PDF_TEXT_EMPTY",
-        message: "The PDF contains no indexable text layer. It might be an un-scanned image."
+        message: "The PDF contains no indexable text layer. It might be an un-scanned image.",
+        stage: "pdf_extract"
       });
     }
 
@@ -279,7 +285,8 @@ router.post('/material-quality', verifyFirebaseToken, loadUserProfile, async (re
     return res.status(500).json({
       ok: false,
       code: "INTERNAL_ERROR",
-      message: "An internal server error occurred while retrieving PDF quality statistics."
+      message: "An internal server error occurred while retrieving PDF quality statistics.",
+      stage: "quality_analysis"
     });
   }
 });
