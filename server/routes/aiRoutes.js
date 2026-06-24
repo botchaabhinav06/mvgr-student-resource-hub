@@ -317,6 +317,8 @@ router.post('/material-summary', verifyFirebaseToken, loadUserProfile, async (re
       ok: false,
       code: err.code || "INTERNAL_ERROR",
       message: err.message || "An internal error occurred during summary generation.",
+      retryable: err.retryable !== undefined ? err.retryable : false,
+      stage: err.stage || "provider_generation",
       quality: err.quality || null
     });
   }
@@ -348,6 +350,8 @@ router.post('/important-questions', verifyFirebaseToken, loadUserProfile, async 
       ok: false,
       code: err.code || "INTERNAL_ERROR",
       message: err.message || "An internal error occurred during questions generation.",
+      retryable: err.retryable !== undefined ? err.retryable : false,
+      stage: err.stage || "provider_generation",
       quality: err.quality || null
     });
   }

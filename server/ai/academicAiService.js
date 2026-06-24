@@ -2,7 +2,7 @@ import { adminDb } from '../firebaseAdmin.js';
 import { validateMaterialAccess } from './materialAccessHelper.js';
 import { fetchR2ObjectAsBuffer } from './r2InternalFetcher.js';
 import { extractTextFromPdfBuffer } from './pdfTextExtractor.js';
-import { getGeminiClient, mapErrorToCategory } from './geminiProvider.js';
+import { getGeminiClient, mapErrorToCategory, getFriendlyErrorMessage } from './geminiProvider.js';
 import { aiConfig } from './aiConfig.js';
 
 /**
@@ -14,21 +14,21 @@ import { aiConfig } from './aiConfig.js';
 async function runAcademicGeminiCall(promptText) {
   const client = getGeminiClient();
   if (!client) {
-    const err = new Error("Gemini API key is not configured on the backend.");
+    const err = new Error("AI is not configured on the backend yet.");
     err.code = "GEMINI_API_KEY_MISSING";
     throw err;
   }
 
   // Build ordered list of models to try
-  const modelsToTry = [aiConfig.defaultModel];
-  for (const model of aiConfig.fallbackModels) {
+  const modelsToTry = [];
+  if (process.env.GEMINI_MODEL) {
+    modelsToTry.push(process.env.GEMINI_MODEL);
+  }
+  const standardFallbacks = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+  for (const model of standardFallbacks) {
     if (!modelsToTry.includes(model)) {
       modelsToTry.push(model);
     }
-  }
-  // Also push gemini-3.5-flash as default if not already in list
-  if (!modelsToTry.includes("gemini-3.5-flash")) {
-    modelsToTry.push("gemini-3.5-flash");
   }
 
   let lastError = null;
@@ -56,8 +56,14 @@ async function runAcademicGeminiCall(promptText) {
       console.warn(`[Academic AI Service Warn] Model ${modelId} failed:`, error.message);
       lastError = error;
       const errorType = mapErrorToCategory(error);
-      if (errorType === "MISSING_API_KEY" || errorType === "INVALID_API_KEY_OR_PERMISSION") {
-        const err = new Error("The backend Gemini API key is invalid or lacks proper credentials.");
+      
+      // Stop immediately for credentials or quota issues
+      if (
+        errorType === "MISSING_API_KEY" ||
+        errorType === "INVALID_API_KEY_OR_PERMISSION" ||
+        errorType === "PROVIDER_QUOTA_EXCEEDED"
+      ) {
+        const err = new Error(error.message || "Credential or Quota error.");
         err.code = errorType;
         throw err;
       }
@@ -116,7 +122,13 @@ export async function generateAcademicAiOutput(userProfile, materialId, action) 
   const accessResult = await validateMaterialAccess(userProfile, materialId);
   if (!accessResult.authorized) {
     console.warn(`[Academic AI Service Access Denied] User: ${userProfile?.uid}, Material: ${materialId}, Code: ${accessResult.code}`);
-    throw { status: 403, code: accessResult.code, message: accessResult.message || "Unauthorized access." };
+    throw {
+      status: 403,
+      code: accessResult.code || "ACCESS_DENIED",
+      message: accessResult.message || "You do not have permission to use AI on this material.",
+      retryable: false,
+      stage: "access_validation"
+    };
   }
 
   const { material, storagePath } = accessResult;
@@ -126,9 +138,8 @@ export async function generateAcademicAiOutput(userProfile, materialId, action) 
     ? material.updatedAt.toDate().toISOString()
     : (material.updatedAt || '');
 
-  // 2. Check Firestore Cache
+  // 2. Check Firestore Cache (Fresh cache checking)
   const cacheKey = `${materialId}_${action}`;
-  let cachedDoc = null;
   if (adminDb) {
     try {
       const cacheRef = adminDb.collection('aiOutputs').doc(cacheKey);
@@ -158,14 +169,16 @@ export async function generateAcademicAiOutput(userProfile, materialId, action) 
 
           return {
             ok: true,
+            action,
             materialId,
             title: material.title,
-            pageCount: cacheData.pageCount || null,
-            extractedChars: cacheData.extractedChars || 0,
-            truncated: cacheData.truncated || false,
             output: cacheData.output,
-            quality: cacheData.quality || null,
-            cached: true
+            cached: true,
+            cacheSource: "fresh-cache",
+            modelUsed: cacheData.model || null,
+            quality: cacheData.quality || { qualityStatus: cacheData.qualityStatus || "good", aiUsable: true },
+            warnings: [],
+            message: "AI output generated successfully."
           };
         }
       }
@@ -180,7 +193,13 @@ export async function generateAcademicAiOutput(userProfile, materialId, action) 
     pdfBuffer = await fetchR2ObjectAsBuffer(storagePath);
   } catch (fetchErr) {
     console.error(`[Academic AI Service Fetch Fail] Material: ${materialId}`, fetchErr.message);
-    const errPayload = { status: 502, code: "R2_OBJECT_NOT_FOUND", message: `Failed to fetch PDF resource from Cloudflare R2: ${fetchErr.message}` };
+    const errPayload = {
+      status: 502,
+      code: "R2_OBJECT_NOT_FOUND",
+      message: `Failed to fetch PDF resource from Cloudflare R2: ${fetchErr.message}`,
+      retryable: false,
+      stage: "access_validation"
+    };
     
     await logAiUsage({
       uid: userProfile.uid,
@@ -203,7 +222,13 @@ export async function generateAcademicAiOutput(userProfile, materialId, action) 
     });
   } catch (parseErr) {
     console.error(`[Academic AI Service Parser Fail] Material: ${materialId}`, parseErr.message);
-    const errPayload = { status: 502, code: "PDF_PARSE_FAILED", message: `Failed to parse PDF binary content: ${parseErr.message}` };
+    const errPayload = {
+      status: 502,
+      code: "PDF_PARSE_FAILED",
+      message: `Failed to parse PDF binary content: ${parseErr.message}`,
+      retryable: false,
+      stage: "quality_guard"
+    };
     
     await logAiUsage({
       uid: userProfile.uid,
@@ -219,7 +244,13 @@ export async function generateAcademicAiOutput(userProfile, materialId, action) 
   }
 
   if (!extraction.hasText) {
-    const errPayload = { status: 422, code: "PDF_TEXT_EMPTY", message: "The PDF contains no indexable text layer. It might be an un-scanned image." };
+    const errPayload = {
+      status: 422,
+      code: "PDF_TEXT_EMPTY",
+      message: "The PDF contains no indexable text layer. It might be an un-scanned image.",
+      retryable: false,
+      stage: "quality_guard"
+    };
     
     await logAiUsage({
       uid: userProfile.uid,
@@ -240,8 +271,15 @@ export async function generateAcademicAiOutput(userProfile, materialId, action) 
     const errPayload = {
       status: 422,
       code: "PDF_TEXT_NOT_AI_USABLE",
-      message: "This PDF was decoded, but its extracted text quality is too low for reliable AI generation. It may be scanned or lack structured sentences.",
-      quality
+      message: "This PDF was decoded, but its extracted text quality is too low for reliable AI generation.",
+      retryable: false,
+      stage: "quality_guard",
+      quality: {
+        qualityStatus: quality.qualityStatus || "poor",
+        aiUsable: false,
+        score: quality.score || 0,
+        unusableReason: quality.unusableReason || "Low structure"
+      }
     };
 
     await logAiUsage({
@@ -324,7 +362,54 @@ ${extraction.text}
   } catch (geminiErr) {
     console.error(`[Academic AI Service Gemini Call Fail] Material: ${materialId}`, geminiErr.message);
     const code = geminiErr.code || "PROVIDER_REQUEST_FAILED";
-    const status = code === "PROVIDER_RATE_LIMIT" || code === "PROVIDER_QUOTA_EXCEEDED" ? 429 : 502;
+
+    // Stale Fallback Check for high demand or rate limit errors
+    if (code === "PROVIDER_HIGH_DEMAND" || code === "PROVIDER_RATE_LIMIT") {
+      if (adminDb) {
+        try {
+          console.log(`[Academic AI Service Stale Fallback Check] Checking stale cache for ${cacheKey}`);
+          const cacheRef = adminDb.collection('aiOutputs').doc(cacheKey);
+          const cacheSnap = await cacheRef.get();
+          if (cacheSnap.exists) {
+            const cacheData = cacheSnap.data();
+            if (cacheData.status === 'active' && cacheData.output) {
+              console.log(`[Academic AI Service Stale Cache Fallback Hit] Serving stale cache for ${materialId}`);
+              
+              await logAiUsage({
+                uid: userProfile.uid,
+                role: userProfile.role,
+                action,
+                materialId,
+                cached: true,
+                model: cacheData.model,
+                qualityStatus: cacheData.qualityStatus,
+                status: 'success'
+              });
+
+              return {
+                ok: true,
+                action,
+                materialId,
+                title: material.title,
+                output: cacheData.output,
+                cached: true,
+                cacheSource: "stale-cache",
+                modelUsed: null,
+                quality: cacheData.quality || { qualityStatus: cacheData.qualityStatus || "good", aiUsable: true },
+                warnings: ["PROVIDER_BUSY_USED_CACHED_OUTPUT"],
+                message: "Showing a previously generated result because the AI provider is temporarily busy."
+              };
+            }
+          }
+        } catch (staleErr) {
+          console.warn('[Academic AI Service Stale Fallback Error] Failed to fetch stale fallback:', staleErr.message);
+        }
+      }
+    }
+
+    const status = (code === "PROVIDER_RATE_LIMIT" || code === "PROVIDER_QUOTA_EXCEEDED") ? 429 
+                 : (code === "PROVIDER_HIGH_DEMAND" || code === "GEMINI_API_KEY_MISSING") ? 503 
+                 : 502;
     
     await logAiUsage({
       uid: userProfile.uid,
@@ -340,7 +425,9 @@ ${extraction.text}
     throw {
       status,
       code,
-      message: geminiErr.message || "Failed to communicate with Gemini AI."
+      message: getFriendlyErrorMessage(code, geminiErr.message),
+      retryable: (code === "PROVIDER_HIGH_DEMAND" || code === "PROVIDER_RATE_LIMIT"),
+      stage: "provider_generation"
     };
   }
 
@@ -386,13 +473,15 @@ ${extraction.text}
 
   return {
     ok: true,
+    action,
     materialId,
     title: material.title,
-    pageCount: extraction.pageCount,
-    extractedChars: extraction.extractedChars,
-    truncated: extraction.truncated,
     output: aiResult.text,
-    quality,
-    cached: false
+    cached: false,
+    cacheSource: "live",
+    modelUsed: aiResult.modelUsed || null,
+    quality: quality || { qualityStatus: "good", aiUsable: true },
+    warnings: [],
+    message: "AI output generated successfully."
   };
 }

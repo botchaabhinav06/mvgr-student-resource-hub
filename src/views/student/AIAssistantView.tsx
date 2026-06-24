@@ -43,6 +43,13 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
     stage?: string;
   }
 
+  interface AIErrorObj {
+    message: string;
+    code?: string;
+    stage?: string;
+    retryable?: boolean;
+  }
+
   // PDF Extraction Quality States
   const [qualityLoading, setQualityLoading] = useState<boolean>(false);
   const [qualityData, setQualityData] = useState<any | null>(null);
@@ -57,8 +64,10 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
     model?: string;
     pageCount?: number;
     extractedChars?: number;
+    warnings?: string[];
+    message?: string;
   } | null>(null);
-  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<AIErrorObj | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
 
   // Fetch quality metrics whenever a student selects a material
@@ -141,7 +150,12 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
     try {
       const token = await auth.currentUser?.getIdToken();
       if (!token) {
-        throw new Error("Authorization credentials missing. Please sign in again.");
+        throw {
+          message: "Authorization credentials missing. Please sign in again.",
+          code: "AUTH_ERROR",
+          stage: "access_validation",
+          retryable: false
+        };
       }
 
       const endpoint = actionType === "summary" ? "/api/ai/material-summary" : "/api/ai/important-questions";
@@ -163,25 +177,41 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
           if (data.quality) {
             setQualityData(data.quality);
           }
-          throw new Error(data.message || "This material text layer quality is too poor for AI generation.");
         }
-        throw new Error(data?.message || `AI extraction failed with status ${response.status}`);
+        throw {
+          message: data?.message || `AI extraction failed with status ${response.status}`,
+          code: data?.code || "HTTP_ERROR",
+          stage: data?.stage || "provider_generation",
+          retryable: data?.retryable !== undefined ? data.retryable : false
+        };
       }
 
       if (data && data.ok) {
         setAiResult({
           output: data.output,
           cached: !!data.cached,
-          model: data.model || "Gemini-3.5-Flash",
+          model: data.modelUsed || "Gemini-3.5-Flash",
           pageCount: data.pageCount,
-          extractedChars: data.extractedChars
+          extractedChars: data.extractedChars,
+          warnings: data.warnings || [],
+          message: data.message || ""
         });
       } else {
-        throw new Error(data?.message || "Academic AI generated an empty response.");
+        throw {
+          message: data?.message || "Academic AI generated an empty response.",
+          code: "EMPTY_RESPONSE",
+          stage: "provider_generation",
+          retryable: true
+        };
       }
     } catch (err: any) {
       console.error("[AI Generation Error]:", err);
-      setAiError(err.message || "An unexpected error occurred during AI content generation.");
+      setAiError({
+        message: err.message || "An unexpected error occurred during AI content generation.",
+        code: err.code || "CLIENT_ERROR",
+        stage: err.stage || "unknown",
+        retryable: err.retryable !== undefined ? err.retryable : false
+      });
     } finally {
       setAiLoading(false);
     }
@@ -657,31 +687,84 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
 
               {/* Error Output */}
               {aiError && !aiLoading && (
-                <div className="p-4 bg-red-950/20 border border-red-900/30 rounded-xl space-y-2">
+                <div className="p-4 bg-red-950/20 border border-red-900/30 rounded-xl space-y-3">
                   <div className="flex items-center gap-2 text-red-400 font-mono text-xs font-bold uppercase">
                     <AlertTriangle className="w-4 h-4" />
                     <span>Generation Blocked</span>
                   </div>
                   <p className="text-xs text-red-200 leading-relaxed">
-                    {aiError}
+                    {aiError.code === "PROVIDER_HIGH_DEMAND" && (
+                      "The AI platform is currently experiencing high traffic. Please try again in 1-2 minutes, or click the button below to retry."
+                    )}
+                    {aiError.code === "PROVIDER_RATE_LIMIT" && (
+                      "Request rate limits reached. Please wait a brief moment before resubmitting."
+                    )}
+                    {aiError.code === "PROVIDER_QUOTA_EXCEEDED" && (
+                      "The institution's daily AI capacity has been reached. Please check back tomorrow."
+                    )}
+                    {aiError.code === "GEMINI_API_KEY_MISSING" && (
+                      "AI features are not fully activated in the administration backend yet. Please contact your coordinator."
+                    )}
+                    {aiError.code === "PDF_TEXT_NOT_AI_USABLE" && (
+                      "This PDF lacks indexable text layer structure. Please select a text-based document or contact your instructor."
+                    )}
+                    {!["PROVIDER_HIGH_DEMAND", "PROVIDER_RATE_LIMIT", "PROVIDER_QUOTA_EXCEEDED", "GEMINI_API_KEY_MISSING", "PDF_TEXT_NOT_AI_USABLE"].includes(aiError.code || "") && (
+                      aiError.message
+                    )}
                   </p>
-                  <p className="text-[10px] text-slate-500 font-mono uppercase">
-                    Ref: academic_ai_security_guard_reject
-                  </p>
+                  
+                  {/* Safe debug info panel */}
+                  <div className="p-2 bg-slate-950 rounded border border-slate-850/50 text-[10px] font-mono space-y-0.5">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 uppercase">Stage:</span>
+                      <span className="text-slate-400 font-bold uppercase">{aiError.stage || "provider_generation"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 uppercase">Error Code:</span>
+                      <span className="text-red-400/90 font-bold">{aiError.code || "UNKNOWN"}</span>
+                    </div>
+                  </div>
+
+                  {aiError.retryable && activeAction && (
+                    <button
+                      onClick={() => handleTriggerAiAction(activeAction)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-cyan-500/15 hover:bg-cyan-500/25 text-cyber-cyan border border-cyber-cyan/30 text-[10px] font-mono font-black uppercase tracking-wider transition-colors cursor-pointer"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Retry Generation</span>
+                    </button>
+                  )}
                 </div>
               )}
 
               {/* Success Result Canvas */}
               {aiResult && !aiLoading && (
-                <div className="bg-slate-950/60 p-5 rounded-xl border border-slate-850 max-h-[500px] overflow-y-auto custom-scrollbar shadow-inner animate-in fade-in slide-in-from-bottom-2">
-                  {renderFormattedMarkdown(aiResult.output)}
+                <div className="space-y-4">
+                  {/* Warnings Banner if present */}
+                  {aiResult.warnings && aiResult.warnings.includes("PROVIDER_BUSY_USED_CACHED_OUTPUT") && (
+                    <div className="p-3.5 bg-amber-950/15 border border-amber-900/30 rounded-xl flex items-start gap-2.5 text-[11px] text-amber-300">
+                      <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
+                      <div>
+                        <span className="font-bold block uppercase tracking-wide text-[10px] text-amber-400">
+                          AI Provider Temporarily Busy
+                        </span>
+                        <p className="mt-0.5 leading-relaxed opacity-95">
+                          Showing a previously generated result because the live AI service is currently at peak capacity.
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
-                  {/* AI Disclaimer */}
-                  <div className="mt-8 pt-4 border-t border-slate-900 flex items-start gap-2 text-[10px] text-slate-500 leading-relaxed font-sans">
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-600" />
-                    <p>
-                      <strong>Academic Disclaimer</strong>: This AI output was generated strictly using your approved lecture content. AI models can synthesize or format inaccurately; please crosscheck key figures, exam references, and dates against original material.
-                    </p>
+                  <div className="bg-slate-950/60 p-5 rounded-xl border border-slate-850 max-h-[500px] overflow-y-auto custom-scrollbar shadow-inner animate-in fade-in slide-in-from-bottom-2">
+                    {renderFormattedMarkdown(aiResult.output)}
+
+                    {/* AI Disclaimer */}
+                    <div className="mt-8 pt-4 border-t border-slate-900 flex items-start gap-2 text-[10px] text-slate-500 leading-relaxed font-sans">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-600" />
+                      <p>
+                        <strong>Academic Disclaimer</strong>: This AI output was generated strictly using your approved lecture content. AI models can synthesize or format inaccurately; please crosscheck key figures, exam references, and dates against original material.
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}

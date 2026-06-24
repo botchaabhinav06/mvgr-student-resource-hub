@@ -31,26 +31,85 @@ export function getGeminiClient() {
  */
 export function mapErrorToCategory(error) {
   if (!error) return "PROVIDER_REQUEST_FAILED";
-  const msg = error.message ? error.message.toLowerCase() : "";
   
+  const msg = error.message ? String(error.message).toLowerCase() : "";
+  const statusVal = error.status ? String(error.status).toUpperCase() : "";
+  const codeVal = error.code ? String(error.code) : "";
+  const statusCodeVal = error.statusCode ? String(error.statusCode) : "";
+
+  // 1. PROVIDER_HIGH_DEMAND
+  if (
+    statusVal === "UNAVAILABLE" ||
+    codeVal === "503" ||
+    statusCodeVal === "503" ||
+    msg.includes("503") ||
+    msg.includes("high demand") ||
+    msg.includes("temporarily unavailable") ||
+    msg.includes("unavailable") ||
+    msg.includes("try again later") ||
+    msg.includes("service unavailable")
+  ) {
+    return "PROVIDER_HIGH_DEMAND";
+  }
+
+  // 2. PROVIDER_RATE_LIMIT
+  if (
+    statusVal === "RESOURCE_EXHAUSTED" && msg.includes("rate limit") ||
+    codeVal === "429" ||
+    statusCodeVal === "429" ||
+    msg.includes("429") ||
+    msg.includes("rate limit") ||
+    msg.includes("too many requests") ||
+    msg.includes("resource exhausted")
+  ) {
+    return "PROVIDER_RATE_LIMIT";
+  }
+
+  // 3. PROVIDER_QUOTA_EXCEEDED
+  if (
+    msg.includes("quota") ||
+    msg.includes("exhausted") ||
+    msg.includes("limit exceeded") ||
+    msg.includes("billing")
+  ) {
+    return "PROVIDER_QUOTA_EXCEEDED";
+  }
+
+  // 4. INVALID_API_KEY_OR_PERMISSION
+  if (
+    codeVal === "401" || codeVal === "403" ||
+    statusCodeVal === "401" || statusCodeVal === "403" ||
+    msg.includes("401") || msg.includes("403") ||
+    msg.includes("api key") || msg.includes("invalid key") ||
+    msg.includes("unauthorized") || msg.includes("permission") || msg.includes("api_key")
+  ) {
+    return "INVALID_API_KEY_OR_PERMISSION";
+  }
+
+  // 5. MISSING_API_KEY
   if (msg.includes("api key") && (msg.includes("missing") || msg.includes("not found"))) {
     return "MISSING_API_KEY";
   }
-  if (msg.includes("key") && (msg.includes("invalid") || msg.includes("not valid") || msg.includes("expired") || msg.includes("unauthorized") || msg.includes("permission") || msg.includes("api_key"))) {
-    return "INVALID_API_KEY_OR_PERMISSION";
-  }
-  if (msg.includes("model") && (msg.includes("not found") || msg.includes("not available") || msg.includes("not support") || msg.includes("invalid model") || msg.includes("unsupported"))) {
+
+  // 6. MODEL_NOT_AVAILABLE
+  if (
+    msg.includes("model") && (
+      msg.includes("not found") ||
+      msg.includes("not available") ||
+      msg.includes("not support") ||
+      msg.includes("invalid model") ||
+      msg.includes("unsupported") ||
+      msg.includes("not enabled")
+    )
+  ) {
     return "MODEL_NOT_AVAILABLE";
   }
-  if (msg.includes("rate limit") || msg.includes("429") || msg.includes("too many requests")) {
-    return "PROVIDER_RATE_LIMIT";
-  }
-  if (msg.includes("quota") || msg.includes("exhausted") || msg.includes("limit exceeded")) {
-    return "PROVIDER_QUOTA_EXCEEDED";
-  }
+
+  // 7. PROVIDER_RESPONSE_PARSE_FAILED
   if (msg.includes("parse") || msg.includes("json") || msg.includes("empty text")) {
     return "PROVIDER_RESPONSE_PARSE_FAILED";
   }
+
   return "PROVIDER_REQUEST_FAILED";
 }
 
@@ -64,11 +123,13 @@ export function getFriendlyErrorMessage(category, rawMessage) {
     case "INVALID_API_KEY_OR_PERMISSION":
       return "The backend Gemini API key is invalid, inactive, or lacks the required credentials.";
     case "MODEL_NOT_AVAILABLE":
-      return "The selected Gemini model ID is not supported or was not found.";
+      return "The requested AI model is temporarily unavailable or unsupported.";
+    case "PROVIDER_HIGH_DEMAND":
+      return "The AI provider is temporarily busy. Please try again in a few minutes.";
     case "PROVIDER_RATE_LIMIT":
-      return "Gemini API rate limits have been reached. Please throttle requests.";
+      return "The AI provider is limiting requests right now. Please try again later.";
     case "PROVIDER_QUOTA_EXCEEDED":
-      return "Gemini API daily usage quota has been fully exhausted.";
+      return "The backend AI quota has been reached. Try again later.";
     case "PROVIDER_RESPONSE_PARSE_FAILED":
       return "AI generated a response but the payload structure could not be parsed safely.";
     case "PROVIDER_REQUEST_FAILED":
