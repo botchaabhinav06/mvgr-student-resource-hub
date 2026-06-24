@@ -14,6 +14,15 @@ export const AdminAIControlView: React.FC = () => {
   const [smokeResult, setSmokeResult] = useState<string | null>(null);
   const [smokeError, setSmokeError] = useState<string | null>(null);
 
+  // AI Diagnostics State
+  const [diagnosticData, setDiagnosticData] = useState<{
+    configuredModel: string;
+    fallbackModels: string[];
+    hasProviderKey: boolean;
+    smokeTestReady: boolean;
+  } | null>(null);
+  const [smokeModelUsed, setSmokeModelUsed] = useState<string | null>(null);
+
   // Trigger health check on load
   useEffect(() => {
     handleCheckHealth();
@@ -47,6 +56,25 @@ export const AdminAIControlView: React.FC = () => {
       if (data && data.ok) {
         setHealthData(data);
         setHealthStatus("success");
+
+        // Load model diagnostic in parallel
+        try {
+          const diagResponse = await fetch(apiUrl("/api/ai/models-diagnostic"), {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/json"
+            }
+          });
+          if (diagResponse.ok) {
+            const diagData = await diagResponse.json();
+            if (diagData.ok) {
+              setDiagnosticData(diagData);
+            }
+          }
+        } catch (diagErr) {
+          console.warn("[Diagnostics Fetch Warning]:", diagErr);
+        }
       } else {
         throw new Error(data?.message || "Invalid response structure from AI health endpoint.");
       }
@@ -61,6 +89,7 @@ export const AdminAIControlView: React.FC = () => {
     setSmokeStatus("testing");
     setSmokeError(null);
     setSmokeResult(null);
+    setSmokeModelUsed(null);
     try {
       const token = await auth.currentUser?.getIdToken();
       if (!token) {
@@ -82,13 +111,14 @@ export const AdminAIControlView: React.FC = () => {
           throw new Error("Only active administrators are authorized to execute the AI smoke test.");
         }
         if (response.status === 502) {
-          throw new Error("Backend reached Gemini, but the provider returned an error. Check model name and API key validity.");
+          throw new Error(data?.message || "Backend reached Gemini, but the provider returned an error. Check model name and API key validity.");
         }
         throw new Error(data?.message || `Server connectivity test failed with status ${response.status}`);
       }
 
       if (data && data.ok) {
         setSmokeResult(data.response || "No response content.");
+        setSmokeModelUsed(data.modelUsed || null);
         setSmokeStatus("success");
       } else {
         // Handle gracefully if missing key reported in a successful 200/OK response or payload
@@ -307,16 +337,24 @@ export const AdminAIControlView: React.FC = () => {
                 <span className="text-slate-300 font-bold uppercase">Gemini</span>
               </div>
               <div className="flex justify-between">
+                <span className="text-slate-500">Active Model:</span>
+                <span className="text-cyber-cyan font-bold">
+                  {diagnosticData?.configuredModel || "gemini-2.5-flash"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Fallbacks:</span>
+                <span className="text-slate-400">
+                  {diagnosticData?.fallbackModels?.join(", ") || "gemini-2.5-flash, gemini-2.0-flash, gemini-1.5-flash"}
+                </span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-slate-500">Key Location:</span>
                 <span className="text-emerald-400 font-bold">Render Secret Env</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Smoke Endpoint:</span>
                 <span className="text-slate-300">/api/ai/smoke-test</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Health Endpoint:</span>
-                <span className="text-slate-300">/api/ai/health</span>
               </div>
               <div className="flex justify-between border-t border-slate-900 pt-2 mt-2">
                 <span className="text-slate-500">Health Status:</span>
@@ -354,6 +392,12 @@ export const AdminAIControlView: React.FC = () => {
                   <span className="text-slate-500">NOT TESTED</span>
                 )}
               </div>
+              {smokeModelUsed && (
+                <div className="flex justify-between border-t border-slate-900 pt-1.5 mt-1 text-[9px]">
+                  <span className="text-slate-500">Model Verified:</span>
+                  <span className="text-emerald-400 font-bold">{smokeModelUsed}</span>
+                </div>
+              )}
             </div>
 
             {/* Success Results / Error Display Panel */}

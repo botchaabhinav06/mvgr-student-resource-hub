@@ -11,6 +11,7 @@
 - ✅ **Phase 12 (AI Planning & Architecture Freeze)**: Completed secure planning, costs matrix modeling, and role-based endpoints freeze (see `AI_ARCHITECTURE_PLAN.md`).
 - ✅ **Phase 12.1**: Student, Faculty, and Admin UI Sidebar Navigation & Assistant View Skeletons integrated.
 - ✅ **Phase 13**: Node/Express Backend Gemini LLM Integration Foundation with lazy SDK client.
+- ✅ **Phase 13.0A/B**: Admin-only AI Smoke Test panel with model-configurable environment overrides & fallback retry loop.
 
 ## Future Scope (Planned)
 
