@@ -1,4 +1,6 @@
-import pdf from 'pdf-parse';
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const pdf = require("pdf-parse");
 
 // PDF Extraction Configuration Limits
 const DEFAULT_MAX_CHARS = 20000;
