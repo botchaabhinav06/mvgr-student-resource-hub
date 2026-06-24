@@ -6,6 +6,7 @@ import { runGeminiTextPrompt } from '../ai/geminiProvider.js';
 import { validateMaterialAccess } from '../ai/materialAccessHelper.js';
 import { fetchR2ObjectAsBuffer } from '../ai/r2InternalFetcher.js';
 import { extractTextFromPdfBuffer } from '../ai/pdfTextExtractor.js';
+import { generateAcademicAiOutput } from '../ai/academicAiService.js';
 
 const router = express.Router();
 
@@ -135,6 +136,148 @@ router.post('/extract-pdf-text-test', verifyFirebaseToken, loadUserProfile, asyn
       ok: false,
       code: "INTERNAL_ERROR",
       message: "An internal server error occurred during PDF text extraction."
+    });
+  }
+});
+
+/**
+ * POST /api/ai/material-quality
+ * Retrieves text extraction quality metrics for the requested material.
+ * Accessible to any authenticated student, faculty, or admin who has access to the material.
+ */
+router.post('/material-quality', verifyFirebaseToken, loadUserProfile, async (req, res) => {
+  try {
+    const { materialId } = req.body || {};
+    if (!materialId) {
+      return res.status(400).json({
+        ok: false,
+        code: "MISSING_MATERIAL_ID",
+        message: "Missing required parameter 'materialId' in request body."
+      });
+    }
+
+    // Step 1: Validate material access permissions
+    const accessResult = await validateMaterialAccess(req.userProfile, materialId);
+    if (!accessResult.authorized) {
+      return res.status(403).json({
+        ok: false,
+        code: accessResult.code,
+        message: accessResult.message || "Access denied."
+      });
+    }
+
+    const { material, storagePath } = accessResult;
+
+    // Step 2: Check database caches first
+    if (adminDb) {
+      const summaryCache = await adminDb.collection('aiOutputs').doc(`${materialId}_pdf_summary`).get();
+      if (summaryCache.exists) {
+        const cacheData = summaryCache.data();
+        if (cacheData.quality) {
+          return res.json({
+            ok: true,
+            materialId,
+            quality: cacheData.quality,
+            cached: true
+          });
+        }
+      }
+
+      const questionsCache = await adminDb.collection('aiOutputs').doc(`${materialId}_important_questions`).get();
+      if (questionsCache.exists) {
+        const cacheData = questionsCache.data();
+        if (cacheData.quality) {
+          return res.json({
+            ok: true,
+            materialId,
+            quality: cacheData.quality,
+            cached: true
+          });
+        }
+      }
+    }
+
+    // Step 3: Fetch R2 PDF & run text quality checks
+    const pdfBuffer = await fetchR2ObjectAsBuffer(storagePath);
+    const extraction = await extractTextFromPdfBuffer(pdfBuffer, {
+      maxPdfChars: 20000
+    });
+
+    return res.json({
+      ok: true,
+      materialId,
+      quality: extraction.quality,
+      cached: false
+    });
+
+  } catch (error) {
+    console.error('[AI Quality Route Error]:', error);
+    return res.status(500).json({
+      ok: false,
+      code: "INTERNAL_ERROR",
+      message: "An internal server error occurred while retrieving PDF quality statistics."
+    });
+  }
+});
+
+/**
+ * POST /api/ai/material-summary
+ * Generates an academic summary for the requested material.
+ * Accessible to any authenticated student, faculty, or admin who has access to the material.
+ */
+router.post('/material-summary', verifyFirebaseToken, loadUserProfile, async (req, res) => {
+  try {
+    const { materialId } = req.body || {};
+    if (!materialId) {
+      return res.status(400).json({
+        ok: false,
+        code: "MISSING_MATERIAL_ID",
+        message: "Missing required parameter 'materialId' in request body."
+      });
+    }
+
+    const result = await generateAcademicAiOutput(req.userProfile, materialId, 'pdf_summary');
+    return res.json(result);
+  } catch (err) {
+    console.error(`[AI Summary Route Error] Material ${req.body?.materialId}:`, err);
+    
+    const status = err.status || 500;
+    return res.status(status).json({
+      ok: false,
+      code: err.code || "INTERNAL_ERROR",
+      message: err.message || "An internal error occurred during summary generation.",
+      quality: err.quality || null
+    });
+  }
+});
+
+/**
+ * POST /api/ai/important-questions
+ * Generates academic study questions for the requested material.
+ * Accessible to any authenticated student, faculty, or admin who has access to the material.
+ */
+router.post('/important-questions', verifyFirebaseToken, loadUserProfile, async (req, res) => {
+  try {
+    const { materialId } = req.body || {};
+    if (!materialId) {
+      return res.status(400).json({
+        ok: false,
+        code: "MISSING_MATERIAL_ID",
+        message: "Missing required parameter 'materialId' in request body."
+      });
+    }
+
+    const result = await generateAcademicAiOutput(req.userProfile, materialId, 'important_questions');
+    return res.json(result);
+  } catch (err) {
+    console.error(`[AI Important Questions Route Error] Material ${req.body?.materialId}:`, err);
+    
+    const status = err.status || 500;
+    return res.status(status).json({
+      ok: false,
+      code: err.code || "INTERNAL_ERROR",
+      message: err.message || "An internal error occurred during questions generation.",
+      quality: err.quality || null
     });
   }
 });

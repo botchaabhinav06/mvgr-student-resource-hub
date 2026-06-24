@@ -1,0 +1,398 @@
+import { adminDb } from '../firebaseAdmin.js';
+import { validateMaterialAccess } from './materialAccessHelper.js';
+import { fetchR2ObjectAsBuffer } from './r2InternalFetcher.js';
+import { extractTextFromPdfBuffer } from './pdfTextExtractor.js';
+import { getGeminiClient, mapErrorToCategory } from './geminiProvider.js';
+import { aiConfig } from './aiConfig.js';
+
+/**
+ * Executes a Gemini model query with custom fallback logic for academic generations.
+ * 
+ * @param {string} promptText - Bounded prompt text.
+ * @returns {Promise<Object>} Object with response text and model used.
+ */
+async function runAcademicGeminiCall(promptText) {
+  const client = getGeminiClient();
+  if (!client) {
+    const err = new Error("Gemini API key is not configured on the backend.");
+    err.code = "GEMINI_API_KEY_MISSING";
+    throw err;
+  }
+
+  // Build ordered list of models to try
+  const modelsToTry = [aiConfig.defaultModel];
+  for (const model of aiConfig.fallbackModels) {
+    if (!modelsToTry.includes(model)) {
+      modelsToTry.push(model);
+    }
+  }
+  // Also push gemini-3.5-flash as default if not already in list
+  if (!modelsToTry.includes("gemini-3.5-flash")) {
+    modelsToTry.push("gemini-3.5-flash");
+  }
+
+  let lastError = null;
+
+  for (const modelId of modelsToTry) {
+    try {
+      console.log(`[Academic AI Service] Attempting academic prompt with model: ${modelId}`);
+      const response = await client.models.generateContent({
+        model: modelId,
+        contents: promptText,
+        config: {
+          systemInstruction: "You are an elite, objective academic assistant. You strictly adhere to academic integrity, and use ONLY the provided source text to construct your answer. Do not introduce outside information or make assumptions.",
+          temperature: 0.15
+        }
+      });
+
+      if (response && response.text) {
+        return {
+          text: response.text,
+          modelUsed: modelId
+        };
+      }
+      throw new Error("Empty text response from Gemini provider.");
+    } catch (error) {
+      console.warn(`[Academic AI Service Warn] Model ${modelId} failed:`, error.message);
+      lastError = error;
+      const errorType = mapErrorToCategory(error);
+      if (errorType === "MISSING_API_KEY" || errorType === "INVALID_API_KEY_OR_PERMISSION") {
+        const err = new Error("The backend Gemini API key is invalid or lacks proper credentials.");
+        err.code = errorType;
+        throw err;
+      }
+    }
+  }
+
+  const cat = mapErrorToCategory(lastError);
+  const err = new Error(lastError?.message || "All fallback models failed.");
+  err.code = cat;
+  throw err;
+}
+
+/**
+ * Logs usage of the AI assistant to the firestore collection `aiUsage`.
+ */
+async function logAiUsage({ uid, role, action, materialId, cached, model, qualityStatus, errorCode, status }) {
+  if (!adminDb) return;
+  try {
+    const now = new Date();
+    const dateKey = now.toISOString().split('T')[0];
+
+    await adminDb.collection('aiUsage').add({
+      uid: uid || 'anonymous',
+      role: role || 'unknown',
+      action,
+      materialId: materialId || null,
+      dateKey,
+      createdAt: now,
+      status: status || 'success',
+      cached: !!cached,
+      model: model || null,
+      qualityStatus: qualityStatus || null,
+      errorCode: errorCode || null
+    });
+  } catch (err) {
+    console.error('[AI Usage Log Failure] Could not write usage metrics:', err.message);
+  }
+}
+
+/**
+ * Core business logic for processing academic AI generation.
+ * Handles access validation, PDF fetch, text extraction, quality guard,
+ * caching (aiOutputs), and usage logging (aiUsage).
+ * 
+ * @param {Object} userProfile - The user's active database profile.
+ * @param {string} materialId - The material document ID.
+ * @param {string} action - 'pdf_summary' | 'important_questions'
+ * @returns {Promise<Object>} Output response containing result metadata and textual body.
+ */
+export async function generateAcademicAiOutput(userProfile, materialId, action) {
+  if (action !== 'pdf_summary' && action !== 'important_questions') {
+    throw { status: 400, code: "INVALID_ACTION", message: "Unsupported AI action type requested." };
+  }
+
+  // 1. Validate Material Access
+  const accessResult = await validateMaterialAccess(userProfile, materialId);
+  if (!accessResult.authorized) {
+    console.warn(`[Academic AI Service Access Denied] User: ${userProfile?.uid}, Material: ${materialId}, Code: ${accessResult.code}`);
+    throw { status: 403, code: accessResult.code, message: accessResult.message || "Unauthorized access." };
+  }
+
+  const { material, storagePath } = accessResult;
+
+  // Resolve material update timestamp as a stable string for cache comparison
+  const materialUpdatedAtStr = material.updatedAt && typeof material.updatedAt.toDate === 'function'
+    ? material.updatedAt.toDate().toISOString()
+    : (material.updatedAt || '');
+
+  // 2. Check Firestore Cache
+  const cacheKey = `${materialId}_${action}`;
+  let cachedDoc = null;
+  if (adminDb) {
+    try {
+      const cacheRef = adminDb.collection('aiOutputs').doc(cacheKey);
+      const cacheSnap = await cacheRef.get();
+      if (cacheSnap.exists) {
+        const cacheData = cacheSnap.data();
+        
+        // Cache Invalidation Check: compare storagePath and updatedAt
+        const matchesStorage = cacheData.storagePath === storagePath;
+        const matchesUpdate = cacheData.updatedAt === materialUpdatedAtStr;
+        const isActive = cacheData.status === 'active';
+
+        if (matchesStorage && matchesUpdate && isActive) {
+          console.log(`[Academic AI Cache Hit] Found active cached ${action} for material ${materialId}`);
+          
+          // Log cached usage
+          await logAiUsage({
+            uid: userProfile.uid,
+            role: userProfile.role,
+            action,
+            materialId,
+            cached: true,
+            model: cacheData.model,
+            qualityStatus: cacheData.qualityStatus,
+            status: 'success'
+          });
+
+          return {
+            ok: true,
+            materialId,
+            title: material.title,
+            pageCount: cacheData.pageCount || null,
+            extractedChars: cacheData.extractedChars || 0,
+            truncated: cacheData.truncated || false,
+            output: cacheData.output,
+            quality: cacheData.quality || null,
+            cached: true
+          };
+        }
+      }
+    } catch (cacheErr) {
+      console.warn('[Academic AI Cache Read Fail] Bypassing cache checks:', cacheErr.message);
+    }
+  }
+
+  // 3. Fetch PDF from Private Cloudflare R2
+  let pdfBuffer;
+  try {
+    pdfBuffer = await fetchR2ObjectAsBuffer(storagePath);
+  } catch (fetchErr) {
+    console.error(`[Academic AI Service Fetch Fail] Material: ${materialId}`, fetchErr.message);
+    const errPayload = { status: 502, code: "R2_OBJECT_NOT_FOUND", message: `Failed to fetch PDF resource from Cloudflare R2: ${fetchErr.message}` };
+    
+    await logAiUsage({
+      uid: userProfile.uid,
+      role: userProfile.role,
+      action,
+      materialId,
+      cached: false,
+      errorCode: "R2_OBJECT_NOT_FOUND",
+      status: 'failed'
+    });
+
+    throw errPayload;
+  }
+
+  // 4. Extract Text and Quality Analyze
+  let extraction;
+  try {
+    extraction = await extractTextFromPdfBuffer(pdfBuffer, {
+      maxPdfChars: 20000 // Limit text layer sent to model
+    });
+  } catch (parseErr) {
+    console.error(`[Academic AI Service Parser Fail] Material: ${materialId}`, parseErr.message);
+    const errPayload = { status: 502, code: "PDF_PARSE_FAILED", message: `Failed to parse PDF binary content: ${parseErr.message}` };
+    
+    await logAiUsage({
+      uid: userProfile.uid,
+      role: userProfile.role,
+      action,
+      materialId,
+      cached: false,
+      errorCode: "PDF_PARSE_FAILED",
+      status: 'failed'
+    });
+
+    throw errPayload;
+  }
+
+  if (!extraction.hasText) {
+    const errPayload = { status: 422, code: "PDF_TEXT_EMPTY", message: "The PDF contains no indexable text layer. It might be an un-scanned image." };
+    
+    await logAiUsage({
+      uid: userProfile.uid,
+      role: userProfile.role,
+      action,
+      materialId,
+      cached: false,
+      errorCode: "PDF_TEXT_EMPTY",
+      status: 'failed'
+    });
+
+    throw errPayload;
+  }
+
+  // 5. Strict Quality Guard check
+  const quality = extraction.quality;
+  if (quality && !quality.aiUsable) {
+    const errPayload = {
+      status: 422,
+      code: "PDF_TEXT_NOT_AI_USABLE",
+      message: "This PDF was decoded, but its extracted text quality is too low for reliable AI generation. It may be scanned or lack structured sentences.",
+      quality
+    };
+
+    await logAiUsage({
+      uid: userProfile.uid,
+      role: userProfile.role,
+      action,
+      materialId,
+      cached: false,
+      qualityStatus: quality.qualityStatus,
+      errorCode: "PDF_TEXT_NOT_AI_USABLE",
+      status: 'failed'
+    });
+
+    throw errPayload;
+  }
+
+  // 6. Build Prompt & Call Gemini
+  let promptText = "";
+  if (action === 'pdf_summary') {
+    promptText = `
+You are an expert academic tutor and summary generator. 
+Construct a structured, professional, and concise academic summary of the study material provided below.
+
+Strict Constraints:
+1. Use ONLY the facts directly mentioned in the provided text. Do not invent details, syllabus topics, or outside content.
+2. If the text does not contain enough information or is insufficient to summarize, state clearly that information is not available in the material.
+3. Keep the language academic, highly objective, clear, and readable.
+
+Format your output into the following clear Markdown sections:
+### 1. Overview
+Provide a concise 2-3 sentence overview/introduction of what this material covers.
+
+### 2. Key Takeaways & Core Points
+List the primary key takeaways or main points as neat bullet points.
+
+### 3. Critical Concepts & Definitions
+Identify and define the most important concepts, terms, or processes described in the text.
+
+### 4. Student Revision Notes
+Provide highly structured, practical study/revision bullets for exam preparation.
+
+---
+Source PDF Extracted Text:
+${extraction.text}
+---
+`;
+  } else if (action === 'important_questions') {
+    promptText = `
+You are an elite academic examiner. 
+Generate exam-focused revision and practice questions strictly from the study material provided below.
+
+Strict Constraints:
+1. Generate questions ONLY from the facts and topics explicitly covered in the provided source text. Do not create questions about external syllabus topics.
+2. Do not guarantee that these exact questions will appear on the exam, but frame them as practical revision practice.
+3. For every question, make sure it can be answered using ONLY the provided text. If the answer is not supported by the text, do not generate the question.
+
+Format your output into the following clear Markdown sections:
+### 1. Short Answer Questions (2 Marks)
+Generate 5 exam-oriented short questions focusing on primary definitions, terms, or quick recalls.
+
+### 2. Medium Answer Questions (5 Marks)
+Generate 3 medium-length questions focused on explanations, comparisons, or core features.
+
+### 3. Essay/Long Answer Questions (10 Marks)
+Generate 2 detailed essay-type questions focused on extensive processes, architectures, or elaborate concepts.
+
+### 4. Syllabus Topics Coverage Note
+Add a brief list of which topics from the PDF were successfully covered by these questions.
+
+---
+Source PDF Extracted Text:
+${extraction.text}
+---
+`;
+  }
+
+  let aiResult;
+  try {
+    aiResult = await runAcademicGeminiCall(promptText);
+  } catch (geminiErr) {
+    console.error(`[Academic AI Service Gemini Call Fail] Material: ${materialId}`, geminiErr.message);
+    const code = geminiErr.code || "PROVIDER_REQUEST_FAILED";
+    const status = code === "PROVIDER_RATE_LIMIT" || code === "PROVIDER_QUOTA_EXCEEDED" ? 429 : 502;
+    
+    await logAiUsage({
+      uid: userProfile.uid,
+      role: userProfile.role,
+      action,
+      materialId,
+      cached: false,
+      qualityStatus: quality?.qualityStatus || null,
+      errorCode: code,
+      status: 'failed'
+    });
+
+    throw {
+      status,
+      code,
+      message: geminiErr.message || "Failed to communicate with Gemini AI."
+    };
+  }
+
+  // 7. Write to Firestore Cache (aiOutputs)
+  if (adminDb) {
+    try {
+      await adminDb.collection('aiOutputs').doc(cacheKey).set({
+        materialId,
+        materialTitle: material.title || "Untitled",
+        materialDepartment: material.department || null,
+        action,
+        output: aiResult.text,
+        model: aiResult.modelUsed,
+        qualityStatus: quality?.qualityStatus || 'good',
+        quality: quality || null,
+        pageCount: extraction.pageCount || null,
+        extractedChars: extraction.extractedChars || 0,
+        truncated: extraction.truncated || false,
+        storagePath,
+        updatedAt: materialUpdatedAtStr,
+        generatedBy: userProfile.uid,
+        generatedRole: userProfile.role,
+        generatedAt: new Date(),
+        status: 'active'
+      });
+      console.log(`[Academic AI Service Cache Saved] Saved cached output for ${cacheKey}`);
+    } catch (saveErr) {
+      console.warn('[Academic AI Service Cache Save Fail] Failed to persist output to cache:', saveErr.message);
+    }
+  }
+
+  // 8. Log successful usage
+  await logAiUsage({
+    uid: userProfile.uid,
+    role: userProfile.role,
+    action,
+    materialId,
+    cached: false,
+    model: aiResult.modelUsed,
+    qualityStatus: quality?.qualityStatus || 'good',
+    status: 'success'
+  });
+
+  return {
+    ok: true,
+    materialId,
+    title: material.title,
+    pageCount: extraction.pageCount,
+    extractedChars: extraction.extractedChars,
+    truncated: extraction.truncated,
+    output: aiResult.text,
+    quality,
+    cached: false
+  };
+}

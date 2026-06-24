@@ -12,12 +12,12 @@
 - ✅ **Phase 12.1**: Student, Faculty, and Admin UI Sidebar Navigation & Assistant View Skeletons integrated.
 - ✅ **Phase 13**: Node/Express Backend Gemini LLM Integration Foundation with lazy SDK client.
 - ✅ **Phase 13.0A/B**: Admin-only AI Smoke Test panel with model-configurable environment overrides & fallback retry loop.
+- ✅ **Phase 13.1**: Secure memory-efficient R2 PDF text extraction with heuristic quality checks and quality guard checks.
+- ✅ **Phase 13.2**: Cache-first (Firestore lookup) PDF Summarizer and MVGR-aligned Question Generator MVP with full Student Assistant Workspace integration.
 
 ## Future Scope (Planned)
 
 ### Short-Term (AI Integration Phases)
-* **Phase 13.1**: Memory-efficient R2 PDF Plain Text parsing with text crop limits.
-* **Phase 13.2**: Cache-first (Firestore lookup) PDF Summarizer and MVGR-aligned Question Generator.
 * **Phase 13.3**: Usage Monitoring & Per-User Daily Rate Limiters.
 * **Phase 13.4**: Lecture Short Notes and Key Glossary Terms Extractors.
 * **Phase 14**: Context-bounded Material Chatbot & Exam Paper Guidelines Helper.
