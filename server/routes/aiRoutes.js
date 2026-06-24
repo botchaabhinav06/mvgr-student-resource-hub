@@ -159,7 +159,15 @@ router.post('/material-quality', verifyFirebaseToken, loadUserProfile, async (re
     // Step 1: Validate material access permissions
     const accessResult = await validateMaterialAccess(req.userProfile, materialId);
     if (!accessResult.authorized) {
-      return res.status(403).json({
+      let status = 403;
+      if (accessResult.code === 'MATERIAL_NOT_FOUND') {
+        status = 404;
+      } else if (accessResult.code === 'MATERIAL_NOT_ACTIVE') {
+        status = 400; // or 409
+      } else if (accessResult.code === 'STORAGE_PROVIDER_UNSUPPORTED') {
+        status = 400;
+      }
+      return res.status(status).json({
         ok: false,
         code: accessResult.code,
         message: accessResult.message || "Access denied."
@@ -170,44 +178,100 @@ router.post('/material-quality', verifyFirebaseToken, loadUserProfile, async (re
 
     // Step 2: Check database caches first
     if (adminDb) {
-      const summaryCache = await adminDb.collection('aiOutputs').doc(`${materialId}_pdf_summary`).get();
-      if (summaryCache.exists) {
-        const cacheData = summaryCache.data();
-        if (cacheData.quality) {
-          return res.json({
-            ok: true,
-            materialId,
-            quality: cacheData.quality,
-            cached: true
-          });
+      try {
+        const summaryCache = await adminDb.collection('aiOutputs').doc(`${materialId}_pdf_summary`).get();
+        if (summaryCache.exists) {
+          const cacheData = summaryCache.data();
+          if (cacheData && cacheData.quality) {
+            const isPoorQuality = cacheData.quality && !cacheData.quality.aiUsable;
+            return res.json({
+              ok: true,
+              materialId,
+              title: material.title || cacheData.materialTitle || "Untitled",
+              pageCount: cacheData.pageCount || null,
+              extractedChars: cacheData.extractedChars || 0,
+              truncated: !!cacheData.truncated,
+              quality: cacheData.quality,
+              message: isPoorQuality 
+                ? "PDF decoded, but extracted text quality is too low for reliable AI use."
+                : "PDF quality check completed."
+            });
+          }
         }
-      }
 
-      const questionsCache = await adminDb.collection('aiOutputs').doc(`${materialId}_important_questions`).get();
-      if (questionsCache.exists) {
-        const cacheData = questionsCache.data();
-        if (cacheData.quality) {
-          return res.json({
-            ok: true,
-            materialId,
-            quality: cacheData.quality,
-            cached: true
-          });
+        const questionsCache = await adminDb.collection('aiOutputs').doc(`${materialId}_important_questions`).get();
+        if (questionsCache.exists) {
+          const cacheData = questionsCache.data();
+          if (cacheData && cacheData.quality) {
+            const isPoorQuality = cacheData.quality && !cacheData.quality.aiUsable;
+            return res.json({
+              ok: true,
+              materialId,
+              title: material.title || cacheData.materialTitle || "Untitled",
+              pageCount: cacheData.pageCount || null,
+              extractedChars: cacheData.extractedChars || 0,
+              truncated: !!cacheData.truncated,
+              quality: cacheData.quality,
+              message: isPoorQuality 
+                ? "PDF decoded, but extracted text quality is too low for reliable AI use."
+                : "PDF quality check completed."
+            });
+          }
         }
+      } catch (cacheErr) {
+        console.warn('[AI Quality Route Cache Read Fail] Bypassing cache checks:', cacheErr.message);
       }
     }
 
     // Step 3: Fetch R2 PDF & run text quality checks
-    const pdfBuffer = await fetchR2ObjectAsBuffer(storagePath);
-    const extraction = await extractTextFromPdfBuffer(pdfBuffer, {
-      maxPdfChars: 20000
-    });
+    let pdfBuffer;
+    try {
+      pdfBuffer = await fetchR2ObjectAsBuffer(storagePath);
+    } catch (fetchErr) {
+      console.error(`[AI Quality Route Fetch Fail] Material: ${materialId}`, fetchErr);
+      return res.status(404).json({
+        ok: false,
+        code: "R2_OBJECT_NOT_FOUND",
+        message: `Failed to fetch PDF resource from Cloudflare R2: ${fetchErr.message}`
+      });
+    }
+
+    let extraction;
+    try {
+      extraction = await extractTextFromPdfBuffer(pdfBuffer, {
+        maxPdfChars: 20000
+      });
+    } catch (parseErr) {
+      console.error(`[AI Quality Route Parser Fail] Material: ${materialId}`, parseErr);
+      return res.status(422).json({
+        ok: false,
+        code: "PDF_PARSE_FAILED",
+        message: `Failed to parse PDF binary content: ${parseErr.message}`
+      });
+    }
+
+    if (!extraction.hasText) {
+      return res.status(422).json({
+        ok: false,
+        code: "PDF_TEXT_EMPTY",
+        message: "The PDF contains no indexable text layer. It might be an un-scanned image."
+      });
+    }
+
+    const isPoorQuality = extraction.quality && !extraction.quality.aiUsable;
+    const msg = isPoorQuality 
+      ? "PDF decoded, but extracted text quality is too low for reliable AI use."
+      : "PDF quality check completed.";
 
     return res.json({
       ok: true,
       materialId,
+      title: material.title || "Untitled",
+      pageCount: extraction.pageCount || null,
+      extractedChars: extraction.extractedChars || 0,
+      truncated: !!extraction.truncated,
       quality: extraction.quality,
-      cached: false
+      message: msg
     });
 
   } catch (error) {

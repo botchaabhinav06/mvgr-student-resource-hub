@@ -461,7 +461,12 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
                       <p className="text-[10px] opacity-90 mt-1 leading-relaxed">
                         {qualityData.qualityStatus === 'good' && "Text layer is rich and healthy. Highly accurate and contextual generation is guaranteed."}
                         {qualityData.qualityStatus === 'weak' && "Moderate text layer. AI summary can run, but formatting or dense sections may have slight deviations."}
-                        {qualityData.qualityStatus === 'poor' && "Low extraction density. Security guard has locked Gemini actions for this file to prevent hallucinations."}
+                        {(qualityData.qualityStatus === 'poor' || qualityData.qualityStatus === 'empty') && (
+                          <>
+                            Low extraction density. Security guard has locked Gemini actions for this file to prevent hallucinations.
+                            <span className="block mt-1.5 font-bold text-red-400">Recommendation: Upload a clean text-based PDF for reliable AI output.</span>
+                          </>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -658,8 +663,8 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {aiFeatures.map((feat) => {
                 const IconComponent = feat.icon;
-                const isUsable = selectedMaterial && qualityData?.aiUsable && feat.active;
-                const showDisabledStatus = selectedMaterial && !qualityData?.aiUsable && feat.active;
+                const isUsable = !!(selectedMaterial && qualityData?.aiUsable && feat.active);
+                const showDisabledStatus = !!(selectedMaterial && qualityData && !qualityData.aiUsable && feat.active);
 
                 return (
                   <div
@@ -715,6 +720,11 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
                         <>
                           <span className="text-cyan-500/70 animate-pulse">Checking quality...</span>
                           <Loader2 className="w-3.5 h-3.5 text-cyan-600 animate-spin" />
+                        </>
+                      ) : qualityError ? (
+                        <>
+                          <span className="text-red-500/80">Blocked: Check Error</span>
+                          <XCircle className="w-3.5 h-3.5 text-red-700 shrink-0" />
                         </>
                       ) : showDisabledStatus ? (
                         <>
