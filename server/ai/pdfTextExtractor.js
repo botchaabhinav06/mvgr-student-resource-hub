@@ -1,36 +1,87 @@
+import { PDFParse } from 'pdf-parse';
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
-const pdfModule = require("pdf-parse");
 
-/**
- * Safely resolves the exact callable function from the imported pdf-parse module.
- * Node ESM and CJS packaging sometimes nest default exports differently.
- */
-function resolvePdfParseModule(moduleValue) {
-  if (typeof moduleValue === "function") {
-    console.log('[PDF Parser Resolution] Strategy resolved: direct function');
-    return moduleValue;
+let pdfModule;
+try {
+  pdfModule = require("pdf-parse");
+} catch (err) {
+  console.warn("[PDF Parser] Failed to require pdf-parse via createRequire:", err.message);
+}
+
+// Resolved parser metadata
+let parserStrategy = null;
+
+function getParserStrategy() {
+  if (parserStrategy) return parserStrategy;
+
+  if (typeof PDFParse === 'function') {
+    parserStrategy = { type: 'class', target: PDFParse, name: 'PDFParse Class (Native ESM)' };
+    return parserStrategy;
   }
-  if (moduleValue && typeof moduleValue.default === "function") {
-    console.log('[PDF Parser Resolution] Strategy resolved: default property');
-    return moduleValue.default;
+
+  if (pdfModule) {
+    if (typeof pdfModule.PDFParse === 'function') {
+      parserStrategy = { type: 'class', target: pdfModule.PDFParse, name: 'PDFParse Class (CJS)' };
+      return parserStrategy;
+    }
+    if (pdfModule.default && typeof pdfModule.default.PDFParse === 'function') {
+      parserStrategy = { type: 'class', target: pdfModule.default.PDFParse, name: 'PDFParse Class (CJS Default)' };
+      return parserStrategy;
+    }
+    if (typeof pdfModule === 'function') {
+      parserStrategy = { type: 'function', target: pdfModule, name: 'pdf-parse direct function' };
+      return parserStrategy;
+    }
+    if (pdfModule.default && typeof pdfModule.default === 'function') {
+      parserStrategy = { type: 'function', target: pdfModule.default, name: 'pdf-parse default function' };
+      return parserStrategy;
+    }
+    if (typeof pdfModule.pdf === 'function') {
+      parserStrategy = { type: 'function', target: pdfModule.pdf, name: 'pdf-parse.pdf function' };
+      return parserStrategy;
+    }
+    if (typeof pdfModule.parse === 'function') {
+      parserStrategy = { type: 'function', target: pdfModule.parse, name: 'pdf-parse.parse function' };
+      return parserStrategy;
+    }
   }
-  if (moduleValue && typeof moduleValue.pdf === "function") {
-    console.log('[PDF Parser Resolution] Strategy resolved: pdf property');
-    return moduleValue.pdf;
-  }
-  if (moduleValue && typeof moduleValue.parse === "function") {
-    console.log('[PDF Parser Resolution] Strategy resolved: parse property');
-    return moduleValue.parse;
-  }
+
   throw new Error("PDF_PARSE_EXPORT_UNSUPPORTED");
 }
 
-let pdfParseFn;
-try {
-  pdfParseFn = resolvePdfParseModule(pdfModule);
-} catch (err) {
-  console.error('[PDF Parser Resolution] Critical: Failed to resolve pdf-parse module callable function.');
+/**
+ * Normalizes parsing of the PDF buffer using the resolved strategy.
+ */
+async function parsePdf(buffer) {
+  const strategy = getParserStrategy();
+  console.log(`[PDF Extraction] Using strategy: ${strategy.name}`);
+
+  if (strategy.type === 'class') {
+    const PDFClass = strategy.target;
+    const parser = new PDFClass({ data: buffer });
+    try {
+      const result = await parser.getText();
+      const pageCount = result.pages ? result.pages.length : (result.total || null);
+      return {
+        text: result.text || '',
+        pageCount: pageCount
+      };
+    } finally {
+      if (typeof parser.destroy === 'function') {
+        await parser.destroy().catch(err => console.warn('[PDF Parser] Failed to destroy parser instance:', err.message));
+      }
+    }
+  } else if (strategy.type === 'function') {
+    const parseFn = strategy.target;
+    const parsedData = await parseFn(buffer);
+    return {
+      text: parsedData.text || '',
+      pageCount: parsedData.numpages || null
+    };
+  }
+
+  throw new Error("PDF_PARSE_EXPORT_UNSUPPORTED");
 }
 
 // PDF Extraction Configuration Limits
@@ -49,17 +100,12 @@ export async function extractTextFromPdfBuffer(buffer, options = {}) {
     throw new Error('Invalid input: Expected a non-empty binary Buffer object.');
   }
 
-  if (!pdfParseFn) {
-    throw new Error('PDF_PARSE_EXPORT_UNSUPPORTED');
-  }
-
   const maxChars = options.maxPdfChars || DEFAULT_MAX_CHARS;
 
   try {
-    // pdf-parse extracts the text and parses basic PDF metadata
-    const parsedData = await pdfParseFn(buffer);
+    const parsedData = await parsePdf(buffer);
 
-    const pageCount = parsedData.numpages || null;
+    const pageCount = parsedData.pageCount;
     let text = parsedData.text || '';
 
     // Normalize whitespace (condense multiple sequential spaces/tabs/newlines)
