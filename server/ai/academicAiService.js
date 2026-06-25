@@ -19,6 +19,9 @@ export function getIndiaDateKey() {
  */
 async function checkQuota(uid, action, role) {
   if (role !== 'student') return { allowed: true };
+  if (!uid || typeof uid !== 'string') {
+    throw { status: 500, code: "AUTH_UID_MISSING", message: "Authenticated user identity could not be resolved.", stage: "auth_context" };
+  }
   
   const dateKey = getIndiaDateKey();
   const docRef = adminDb.collection('aiUsageDaily').doc(`${uid}_${dateKey}`);
@@ -48,6 +51,9 @@ async function checkQuota(uid, action, role) {
  * Atomically increments quota.
  */
 async function incrementQuota(uid, action) {
+  if (!uid || typeof uid !== 'string') {
+    throw { status: 500, code: "AUTH_UID_MISSING", message: "Authenticated user identity could not be resolved.", stage: "auth_context" };
+  }
   const dateKey = getIndiaDateKey();
   const docRef = adminDb.collection('aiUsageDaily').doc(`${uid}_${dateKey}`);
   
@@ -140,12 +146,16 @@ export function prepareAcademicTextForPrompt(extractedText, action) {
  */
 async function logAiUsage({ uid, role, action, materialId, cached, model, qualityStatus, errorCode, status }) {
   if (!adminDb) return;
+  if (!uid || typeof uid !== 'string') {
+    console.error(`[AI Usage Log Failure] Invalid UID: ${uid}`);
+    return;
+  }
   try {
     const now = new Date();
     const dateKey = now.toISOString().split('T')[0];
 
     await adminDb.collection('aiUsage').add({
-      uid: uid || 'anonymous',
+      uid,
       role: role || 'unknown',
       action,
       materialId: materialId || null,
