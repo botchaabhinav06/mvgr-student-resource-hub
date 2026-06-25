@@ -27,6 +27,13 @@ router.get('/health', (req, res) => {
   });
 });
 
+// Helper to check if the user is an active administrator
+function isAdmin(userProfile) {
+  const role = userProfile && userProfile.role;
+  const status = userProfile && (userProfile.status || userProfile.accountStatus || 'active');
+  return role === 'admin' && status === 'active';
+}
+
 // Helper to check if the user is an active faculty or admin
 function isFacultyOrAdmin(userProfile) {
   const role = userProfile && userProfile.role;
