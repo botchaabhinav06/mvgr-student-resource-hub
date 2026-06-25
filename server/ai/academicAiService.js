@@ -177,12 +177,13 @@ async function logAiUsage({ uid, role, action, materialId, cached, model, qualit
  * Handles access validation, PDF fetch, text extraction, quality guard,
  * caching (aiOutputs), and usage logging (aiUsage).
  * 
- * @param {Object} userProfile - The user's active database profile.
+ * @param {Object} context - The user context { uid, role, userProfile }.
  * @param {string} materialId - The material document ID.
  * @param {string} action - 'pdf_summary' | 'important_questions'
  * @returns {Promise<Object>} Output response containing result metadata and textual body.
  */
-export async function generateAcademicAiOutput(userProfile, materialId, action) {
+export async function generateAcademicAiOutput(context, materialId, action) {
+  const { uid, role, userProfile } = context;
   if (action !== 'pdf_summary' && action !== 'important_questions') {
     throw { status: 400, code: "INVALID_ACTION", message: "Unsupported AI action type requested." };
   }
@@ -190,7 +191,7 @@ export async function generateAcademicAiOutput(userProfile, materialId, action) 
   // 1. Validate Material Access
   const accessResult = await validateMaterialAccess(userProfile, materialId);
   if (!accessResult.authorized) {
-    console.warn(`[Academic AI Service Access Denied] User: ${userProfile?.uid}, Material: ${materialId}, Code: ${accessResult.code}`);
+    console.warn(`[Academic AI Service Access Denied] User: ${uid}, Material: ${materialId}, Code: ${accessResult.code}`);
     throw {
       status: 403,
       code: accessResult.code || "ACCESS_DENIED",
@@ -226,8 +227,8 @@ export async function generateAcademicAiOutput(userProfile, materialId, action) 
           
           // Log cached usage
           await logAiUsage({
-            uid: userProfile.uid,
-            role: userProfile.role,
+            uid,
+            role,
             action,
             materialId,
             cached: true,
@@ -271,8 +272,8 @@ export async function generateAcademicAiOutput(userProfile, materialId, action) 
     };
     
     await logAiUsage({
-      uid: userProfile.uid,
-      role: userProfile.role,
+      uid,
+      role,
       action,
       materialId,
       cached: false,
@@ -300,8 +301,8 @@ export async function generateAcademicAiOutput(userProfile, materialId, action) 
     };
     
     await logAiUsage({
-      uid: userProfile.uid,
-      role: userProfile.role,
+      uid,
+      role,
       action,
       materialId,
       cached: false,
@@ -322,8 +323,8 @@ export async function generateAcademicAiOutput(userProfile, materialId, action) 
     };
     
     await logAiUsage({
-      uid: userProfile.uid,
-      role: userProfile.role,
+      uid,
+      role,
       action,
       materialId,
       cached: false,
@@ -352,8 +353,8 @@ export async function generateAcademicAiOutput(userProfile, materialId, action) 
     };
 
     await logAiUsage({
-      uid: userProfile.uid,
-      role: userProfile.role,
+      uid,
+      role,
       action,
       materialId,
       cached: false,
@@ -370,7 +371,7 @@ export async function generateAcademicAiOutput(userProfile, materialId, action) 
   const textForPrompt = prepared.textForPrompt;
   
   // Check quota
-  const quotaCheck = await checkQuota(userProfile.uid, action, userProfile.role);
+  const quotaCheck = await checkQuota(uid, action, role);
   if (!quotaCheck.allowed) {
     throw {
       status: 429,
@@ -461,8 +462,8 @@ ${textForPrompt}
               console.log(`[Academic AI Service Stale Cache Fallback Hit] Serving stale cache for ${materialId}`);
               
               await logAiUsage({
-                uid: userProfile.uid,
-                role: userProfile.role,
+                uid,
+                role,
                 action,
                 materialId,
                 cached: true,
@@ -497,8 +498,8 @@ ${textForPrompt}
                  : 502;
     
     await logAiUsage({
-      uid: userProfile.uid,
-      role: userProfile.role,
+      uid,
+      role,
       action,
       materialId,
       cached: false,
@@ -533,8 +534,8 @@ ${textForPrompt}
         truncated: extraction.truncated || false,
         storagePath,
         updatedAt: materialUpdatedAtStr,
-        generatedBy: userProfile.uid,
-        generatedRole: userProfile.role,
+        generatedBy: uid,
+        generatedRole: role,
         generatedAt: new Date(),
         status: 'active'
       });
@@ -546,8 +547,8 @@ ${textForPrompt}
 
   // 8. Log successful usage
   await logAiUsage({
-    uid: userProfile.uid,
-    role: userProfile.role,
+    uid,
+    role,
     action,
     materialId,
     cached: false,
@@ -557,7 +558,7 @@ ${textForPrompt}
   });
 
   // Increment quota
-  const quotaResult = await incrementQuota(userProfile.uid, action);
+  const quotaResult = await incrementQuota(uid, action);
 
   return {
     ok: true,

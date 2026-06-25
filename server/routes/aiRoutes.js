@@ -57,7 +57,7 @@ router.get('/quota-status', verifyFirebaseToken, loadUserProfile, async (req, re
     }
 
     const dateKey = getIndiaDateKey();
-    const docRef = adminDb.collection('aiUsageDaily').doc(`${user.uid}_${dateKey}`);
+    const docRef = adminDb.collection('aiUsageDaily').doc(`${req.uid}_${dateKey}`);
     const doc = await docRef.get();
     
     const used = doc.exists ? doc.data().used : { pdf_summary: 0, important_questions: 0 };
@@ -350,7 +350,11 @@ router.post('/material-summary', verifyFirebaseToken, loadUserProfile, async (re
       });
     }
 
-    const result = await generateAcademicAiOutput(req.userProfile, materialId, 'pdf_summary');
+    const result = await generateAcademicAiOutput({
+      uid: req.uid,
+      role: req.userProfile.role,
+      userProfile: req.userProfile
+    }, materialId, 'pdf_summary');
     return res.json(result);
   } catch (err) {
     console.error(`[AI Summary Route Error] Material ${req.body?.materialId}:`, err);
@@ -384,7 +388,11 @@ router.post('/important-questions', verifyFirebaseToken, loadUserProfile, async 
       });
     }
 
-    const result = await generateAcademicAiOutput(req.userProfile, materialId, 'important_questions');
+    const result = await generateAcademicAiOutput({
+      uid: req.uid,
+      role: req.userProfile.role,
+      userProfile: req.userProfile
+    }, materialId, 'important_questions');
     return res.json(result);
   } catch (err) {
     console.error(`[AI Important Questions Route Error] Material ${req.body?.materialId}:`, err);

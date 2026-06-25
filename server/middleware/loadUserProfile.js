@@ -28,7 +28,7 @@ export async function loadUserProfile(req, res, next) {
       });
     }
 
-    req.userProfile = userDoc.data();
+    req.userProfile = { ...userDoc.data(), uid: req.uid };
     next();
   } catch (error) {
     console.error('[loadUserProfile] Error retrieving user document: ', error.message);
