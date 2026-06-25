@@ -240,12 +240,7 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
         });
         // Update quota
         if (data.quota) {
-          const actionKey = actionType === 'summary' ? 'pdf_summary' : 'important_questions';
-          setQuota(prev => ({
-            ...prev,
-            used: { ...prev?.used, [actionKey]: data.quota.used[actionKey] },
-            remaining: { ...prev?.remaining, [actionKey]: data.quota.remaining[actionKey] }
-          }));
+          setQuota(data.quota);
         }
       } else {
         throw {

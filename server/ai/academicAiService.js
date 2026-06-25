@@ -78,13 +78,15 @@ async function incrementQuota(uid, action) {
     data.updatedAt = new Date();
     transaction.set(docRef, data, { merge: true });
     
-    return { 
-      action,
-      limit: aiConfig.studentDailyLimits[action],
-      used: data.used[action],
-      remaining: aiConfig.studentDailyLimits[action] - data.used[action],
-      dateKey 
-    };
+    return {
+    limits: aiConfig.studentDailyLimits,
+    used: data.used,
+    remaining: {
+      pdf_summary: aiConfig.studentDailyLimits.pdf_summary - (data.used.pdf_summary || 0),
+      important_questions: aiConfig.studentDailyLimits.important_questions - (data.used.important_questions || 0)
+    },
+    dateKey
+  };
   });
 }
 
