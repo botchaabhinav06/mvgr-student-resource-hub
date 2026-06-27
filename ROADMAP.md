@@ -14,12 +14,13 @@
 - ✅ **Phase 13.0A/B**: Admin-only AI Smoke Test panel with model-configurable environment overrides & fallback retry loop.
 - ✅ **Phase 13.1**: Secure memory-efficient R2 PDF text extraction with heuristic quality checks and quality guard checks.
 - ✅ **Phase 13.2**: Cache-first (Firestore lookup) PDF Summarizer and MVGR-aligned Question Generator MVP with full Student Assistant Workspace integration.
+- ✅ **Phase 13.3**: Usage Monitoring & Per-User Daily Rate Limiters with live Daily AI Quota panels.
+- ✅ **Phase 13.4**: AI Output History & Saved Results secure archive with strict access control and zero-quota viewing.
 
 ## Future Scope (Planned)
 
 ### Short-Term (AI Integration Phases)
-* **Phase 13.3**: Usage Monitoring & Per-User Daily Rate Limiters.
-* **Phase 13.4**: Lecture Short Notes and Key Glossary Terms Extractors.
+* **Phase 13.5**: Lecture Short Notes and Key Glossary Terms Extractors.
 * **Phase 14**: Context-bounded Material Chatbot & Exam Paper Guidelines Helper.
 * **Phase 14.1**: Multi-turn Cost-Controlled Mini Study Assistant.
 * **Phase 15**: Multi-User AI Privacy, Cost Performance, and Final Prompt Injection Audits.

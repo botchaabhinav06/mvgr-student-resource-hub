@@ -28,6 +28,7 @@ import { ReportsView as StudentReports } from "./views/student/ReportsView";
 import { ProfileView as StudentProfileView } from "./views/student/ProfileView";
 import { QuestionPapersView as StudentQuestionPapers } from "./views/student/QuestionPapersView";
 import { AIAssistantView } from "./views/student/AIAssistantView";
+import { AIHistoryView } from "./views/student/AIHistoryView";
 
 // Views faculty layout
 import { DashboardView as FacultyDashboard } from "./views/faculty/DashboardView";
@@ -878,6 +879,12 @@ export default function App() {
             <AIAssistantView
               user={currentUser as StudentProfile}
               materials={materials}
+            />
+          );
+        case "STUDENT_AI_HISTORY":
+          return (
+            <AIHistoryView
+              user={currentUser as StudentProfile}
             />
           );
         default:
