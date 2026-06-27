@@ -13,7 +13,8 @@ export const aiConfig = {
   // Specific student daily limits for academic AI actions
   studentDailyLimits: {
     pdf_summary: 10,
-    important_questions: 10
+    important_questions: 10,
+    short_notes: 10
   },
   
   facultyDailyLimit: 10,

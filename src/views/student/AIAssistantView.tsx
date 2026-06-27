@@ -59,7 +59,7 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
 
   // AI Generation States
   const [aiLoading, setAiLoading] = useState<boolean>(false);
-  const [activeAction, setActiveAction] = useState<"summary" | "questions" | null>(null);
+  const [activeAction, setActiveAction] = useState<"summary" | "questions" | "short_notes" | null>(null);
   const [aiResult, setAiResult] = useState<{
     output: string;
     cached: boolean;
@@ -167,11 +167,16 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
   }, [selectedMaterialId]);
 
   // Execute actual academic AI generation
-  const handleTriggerAiAction = async (actionType: "summary" | "questions") => {
+  const handleTriggerAiAction = async (actionType: "summary" | "questions" | "short_notes") => {
     if (!selectedMaterialId) return;
     
     // Quota check
-    const actionKey = actionType === 'summary' ? 'pdf_summary' : 'important_questions';
+    const actionKey = actionType === 'summary' 
+      ? 'pdf_summary' 
+      : actionType === 'questions' 
+      ? 'important_questions' 
+      : 'short_notes';
+      
     if (quota && quota.remaining[actionKey] <= 0) {
       setAiError({
         message: "You have used all daily generations for this feature.",
@@ -198,7 +203,11 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
         };
       }
 
-      const endpoint = actionType === "summary" ? "/api/ai/material-summary" : "/api/ai/important-questions";
+      const endpoint = actionType === "summary" 
+        ? "/api/ai/material-summary" 
+        : actionType === "questions" 
+        ? "/api/ai/important-questions" 
+        : "/api/ai/short-notes";
 
       const response = await fetch(apiUrl(endpoint), {
         method: "POST",
@@ -359,13 +368,13 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
       active: true,
     },
     {
-      id: "notes",
+      id: "short_notes",
       title: "Short Notes Generator",
       description: "Transforms dense document PDFs into clean, well-structured, scannable study outlines and lecture highlights.",
       icon: Brain,
-      badge: "Phase 13.4",
-      badgeColor: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
-      active: false,
+      badge: "Active MVP",
+      badgeColor: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+      active: true,
     },
     {
       id: "terms",
@@ -443,7 +452,7 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
           </div>
           
           {quota ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex justify-between items-center bg-slate-950 px-3 py-2 rounded-lg border border-slate-850">
                 <span className="text-[11px] text-slate-400 font-mono">PDF Summary:</span>
                 <span className={`text-[11px] font-bold ${quota.remaining.pdf_summary > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -454,6 +463,12 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
                 <span className="text-[11px] text-slate-400 font-mono">Important Questions:</span>
                 <span className={`text-[11px] font-bold ${quota.remaining.important_questions > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                   {quota.remaining.important_questions} / {quota.limits.important_questions} remaining
+                </span>
+              </div>
+              <div className="flex justify-between items-center bg-slate-950 px-3 py-2 rounded-lg border border-slate-850">
+                <span className="text-[11px] text-slate-400 font-mono">Short Notes:</span>
+                <span className={`text-[11px] font-bold ${quota.remaining.short_notes > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {quota.remaining.short_notes} / {quota.limits.short_notes} remaining
                 </span>
               </div>
             </div>
@@ -692,12 +707,19 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
                 <div className="flex items-center gap-2.5">
                   {activeAction === "summary" ? (
                     <FileText className="w-5 h-5 text-cyber-cyan" />
-                  ) : (
+                  ) : activeAction === "questions" ? (
                     <GraduationCap className="w-5 h-5 text-cyber-cyan" />
+                  ) : (
+                    <Brain className="w-5 h-5 text-cyber-cyan" />
                   )}
                   <div>
                     <h3 className="text-xs font-mono font-extrabold text-slate-200 uppercase tracking-wider">
-                      {activeAction === "summary" ? "Academic Material Summary" : "Important Practice Questions"}
+                      {activeAction === "summary" 
+                        ? "Academic Material Summary" 
+                        : activeAction === "questions" 
+                        ? "Important Practice Questions" 
+                        : "Academic Short Notes"
+                      }
                     </h3>
                     <p className="text-[10px] text-slate-500 truncate max-w-[200px] md:max-w-[400px]" title={selectedMaterial?.title}>
                       Grounded: {selectedMaterial?.title}
@@ -752,7 +774,9 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
                     <p className="text-[10px] text-slate-500 mt-1 leading-relaxed max-w-sm">
                       {activeAction === "summary" 
                         ? "Running internal PDF fetching, extracting text chunks, and structuring overview digests..."
-                        : "Compiling vocabulary syllabus matrices and synthesizing dual, medium, and exam-focused essay worksheets..."
+                        : activeAction === "questions"
+                        ? "Compiling vocabulary syllabus matrices and synthesizing dual, medium, and exam-focused essay worksheets..."
+                        : "Synthesizing topic outlines, definitions, core concepts, and exam revision guides..."
                       }
                     </p>
                   </div>
@@ -881,7 +905,14 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {aiFeatures.map((feat) => {
                 const IconComponent = feat.icon;
-                const actionKey = feat.id === 'summary' ? 'pdf_summary' : feat.id === 'questions' ? 'important_questions' : null;
+                const actionKey = feat.id === 'summary' 
+                  ? 'pdf_summary' 
+                  : feat.id === 'questions' 
+                  ? 'important_questions' 
+                  : feat.id === 'short_notes' 
+                  ? 'short_notes' 
+                  : null;
+                  
                 const hasQuota = quota && actionKey ? quota.remaining[actionKey] > 0 : true;
                 const isUsable = !!(selectedMaterial && qualityData?.aiUsable && feat.active && hasQuota);
                 const showDisabledStatus = !!(selectedMaterial && qualityData && !qualityData.aiUsable && feat.active);
@@ -960,7 +991,7 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
                       ) : (
                         <button
                           id={`btn-generate-${feat.id}`}
-                          onClick={() => handleTriggerAiAction(feat.id as "summary" | "questions")}
+                          onClick={() => handleTriggerAiAction(feat.id as "summary" | "questions" | "short_notes")}
                           disabled={aiLoading}
                           className="w-full text-left flex items-center justify-between text-cyber-cyan group-hover:text-slate-100 transition-colors"
                         >

@@ -67,7 +67,7 @@ async function incrementQuota(uid, action) {
         dateKey,
         timezone: 'Asia/Kolkata',
         limits: { ...aiConfig.studentDailyLimits },
-        used: { pdf_summary: 0, important_questions: 0 },
+        used: { pdf_summary: 0, important_questions: 0, short_notes: 0 },
         updatedAt: new Date()
       };
     } else {
@@ -83,7 +83,8 @@ async function incrementQuota(uid, action) {
     used: data.used,
     remaining: {
       pdf_summary: aiConfig.studentDailyLimits.pdf_summary - (data.used.pdf_summary || 0),
-      important_questions: aiConfig.studentDailyLimits.important_questions - (data.used.important_questions || 0)
+      important_questions: aiConfig.studentDailyLimits.important_questions - (data.used.important_questions || 0),
+      short_notes: aiConfig.studentDailyLimits.short_notes - (data.used.short_notes || 0)
     },
     dateKey
   };
@@ -122,6 +123,7 @@ export function prepareAcademicTextForPrompt(extractedText, action) {
   const charLimits = {
     pdf_summary: 22000,
     important_questions: 24000,
+    short_notes: 24000,
   };
   
   const limit = charLimits[action] || 12000;
@@ -186,7 +188,7 @@ async function logAiUsage({ uid, role, action, materialId, cached, model, qualit
  */
 export async function generateAcademicAiOutput(context, materialId, action) {
   const { uid, role, userProfile } = context;
-  if (action !== 'pdf_summary' && action !== 'important_questions') {
+  if (action !== 'pdf_summary' && action !== 'important_questions' && action !== 'short_notes') {
     throw { status: 400, code: "INVALID_ACTION", message: "Unsupported AI action type requested." };
   }
 
@@ -436,6 +438,34 @@ Generate 2 detailed essay-type questions focused on extensive processes, archite
 
 ### 4. Syllabus Topics Coverage Note
 Add a brief list of which topics from the PDF were successfully covered by these questions.
+
+---
+Source PDF Extracted Text:
+${textForPrompt}
+---
+`;
+  } else if (action === 'short_notes') {
+    promptText = `
+You are an expert academic tutor and study notes designer.
+Generate highly concise, structured, and exam-friendly short revision notes strictly from the study material provided below.
+
+Strict Constraints:
+1. Use ONLY the facts directly mentioned in the provided text. Do not invent details, syllabus topics, or outside content.
+2. If the text does not contain enough information or is insufficient to extract notes, state clearly that information is not available in the material.
+3. No exam prediction guarantee or faked syllabus coverage. Keep it clear, readable, and highly accurate to the text.
+
+Format your output into the following clear Markdown sections:
+### 1. Main Topics Overview
+Provide a highly structured high-level summary of the main topics described in the text.
+
+### 2. Core Concepts & Technical Details
+For each major concept: list key definitions, technical details, equations or architectures, and explanations as concise bullet points.
+
+### 3. Last-Minute Revision Points
+Provide quick, punchy revision bullet points perfect for last-minute cramming.
+
+### 4. Key Exam Revision Focus Areas
+Identify critical focus areas based purely on the given content that a student should revise carefully.
 
 ---
 Source PDF Extracted Text:

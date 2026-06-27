@@ -14,7 +14,8 @@ import {
   Info, 
   ExternalLink,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  Brain
 } from "lucide-react";
 import { StudentProfile } from "../../types";
 import { auth } from "../../firebase/firebaseConfig";
@@ -33,7 +34,7 @@ interface HistoryItem {
   semester: string;
   year: string;
   department: string;
-  action: "pdf_summary" | "important_questions";
+  action: "pdf_summary" | "important_questions" | "short_notes";
   actionLabel: string;
   outputPreview: string;
   output: string;
@@ -48,7 +49,7 @@ export const AIHistoryView: React.FC<AIHistoryViewProps> = ({ user }) => {
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "pdf_summary" | "important_questions">("all");
+  const [filter, setFilter] = useState<"all" | "pdf_summary" | "important_questions" | "short_notes">("all");
   const [selectedItem, setSelectedItem] = useState<HistoryItem | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
 
@@ -185,7 +186,7 @@ export const AIHistoryView: React.FC<AIHistoryViewProps> = ({ user }) => {
             AI Output History
           </h1>
           <p className="text-xs text-slate-400 max-w-xl">
-            Revisit previously generated lecture summaries and important practice question matrices.
+            Revisit previously generated lecture summaries, important practice question matrices, and short revision notes.
           </p>
         </div>
 
@@ -312,6 +313,16 @@ export const AIHistoryView: React.FC<AIHistoryViewProps> = ({ user }) => {
               >
                 Important Questions ({items.filter(i => i.action === 'important_questions').length})
               </button>
+              <button
+                onClick={() => setFilter("short_notes")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold uppercase transition-all cursor-pointer border ${
+                  filter === "short_notes" 
+                    ? "bg-cyan-500/10 text-cyber-cyan border-cyan-500/20" 
+                    : "text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-800/40"
+                }`}
+              >
+                Short Notes ({items.filter(i => i.action === 'short_notes').length})
+              </button>
             </div>
           </div>
 
@@ -347,7 +358,7 @@ export const AIHistoryView: React.FC<AIHistoryViewProps> = ({ user }) => {
                 </h3>
                 <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
                   {filter === "all" 
-                    ? "Generate an academic summary or practice questions for any document inside the AI Assistant, and they will securely appear in your archive here."
+                    ? "Generate an academic summary, practice questions, or short revision notes for any document inside the AI Assistant, and they will securely appear in your archive here."
                     : "No historical generations match the selected category."}
                 </p>
               </div>
@@ -365,8 +376,10 @@ export const AIHistoryView: React.FC<AIHistoryViewProps> = ({ user }) => {
                       <div className="p-2 rounded-lg bg-slate-950 border border-slate-850 text-cyan-400 shrink-0">
                         {item.action === "pdf_summary" ? (
                           <FileText className="w-4 h-4 text-cyber-cyan" />
-                        ) : (
+                        ) : item.action === "important_questions" ? (
                           <GraduationCap className="w-4 h-4 text-cyber-cyan" />
+                        ) : (
+                          <Brain className="w-4 h-4 text-cyber-cyan" />
                         )}
                       </div>
                       <div className="text-left">
