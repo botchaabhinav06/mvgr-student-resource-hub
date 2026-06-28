@@ -59,7 +59,7 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
 
   // AI Generation States
   const [aiLoading, setAiLoading] = useState<boolean>(false);
-  const [activeAction, setActiveAction] = useState<"summary" | "questions" | "short_notes" | null>(null);
+  const [activeAction, setActiveAction] = useState<"summary" | "questions" | "short_notes" | "key_terms" | null>(null);
   const [aiResult, setAiResult] = useState<{
     output: string;
     cached: boolean;
@@ -167,7 +167,7 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
   }, [selectedMaterialId]);
 
   // Execute actual academic AI generation
-  const handleTriggerAiAction = async (actionType: "summary" | "questions" | "short_notes") => {
+  const handleTriggerAiAction = async (actionType: "summary" | "questions" | "short_notes" | "key_terms") => {
     if (!selectedMaterialId) return;
     
     // Quota check
@@ -175,7 +175,9 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
       ? 'pdf_summary' 
       : actionType === 'questions' 
       ? 'important_questions' 
-      : 'short_notes';
+      : actionType === 'short_notes'
+      ? 'short_notes'
+      : 'key_terms';
       
     if (quota && quota.remaining[actionKey] <= 0) {
       setAiError({
@@ -207,7 +209,9 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
         ? "/api/ai/material-summary" 
         : actionType === "questions" 
         ? "/api/ai/important-questions" 
-        : "/api/ai/short-notes";
+        : actionType === "short_notes"
+        ? "/api/ai/short-notes"
+        : "/api/ai/key-terms";
 
       const response = await fetch(apiUrl(endpoint), {
         method: "POST",
@@ -294,56 +298,126 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
       );
     };
 
+    const elements: React.ReactNode[] = [];
+    let currentTableRows: string[][] = [];
+    let inTable = false;
+
+    const flushTable = (key: number) => {
+      if (currentTableRows.length === 0) return null;
+      // Filter out separator rows, e.g. containing only dashes, colons, or pipes
+      const filteredRows = currentTableRows.filter(row => {
+        const joined = row.join("").trim();
+        return !joined.match(/^[:\s-|]+$/);
+      });
+
+      if (filteredRows.length === 0) {
+        currentTableRows = [];
+        return null;
+      }
+
+      const headers = filteredRows[0];
+      const bodyRows = filteredRows.slice(1);
+
+      const tableEl = (
+        <div key={`table-${key}`} className="my-5 overflow-x-auto rounded-lg border border-slate-800 bg-slate-900/40">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="bg-slate-900/80 border-b border-slate-800">
+                {headers.map((cell, cellIdx) => (
+                  <th key={cellIdx} className="p-3 font-mono font-bold text-cyber-cyan tracking-wider">
+                    {parseBoldTags(cell.trim())}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60">
+              {bodyRows.map((row, rowIdx) => (
+                <tr key={rowIdx} className="hover:bg-slate-900/20 transition-colors">
+                  {row.map((cell, cellIdx) => (
+                    <td key={cellIdx} className="p-3 text-slate-300 leading-normal">
+                      {parseBoldTags(cell.trim())}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+
+      currentTableRows = [];
+      return tableEl;
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+        inTable = true;
+        // Split by '|', skip the first and last empty elements
+        const cells = line.split("|").slice(1, -1);
+        currentTableRows.push(cells);
+      } else {
+        if (inTable) {
+          const table = flushTable(i);
+          if (table) elements.push(table);
+          inTable = false;
+        }
+
+        if (trimmed.startsWith("###")) {
+          elements.push(
+            <h3 key={i} className="text-xs font-mono font-black text-cyber-cyan border-b border-slate-800 pb-1.5 mt-6 first:mt-0 uppercase tracking-widest">
+              {trimmed.replace(/^###\s*/, "")}
+            </h3>
+          );
+        } else if (trimmed.startsWith("##")) {
+          elements.push(
+            <h2 key={i} className="text-sm font-bold text-slate-200 mt-6 pb-2 border-b border-slate-850 uppercase tracking-tight">
+              {trimmed.replace(/^##\s*/, "")}
+            </h2>
+          );
+        } else if (trimmed.startsWith("#")) {
+          elements.push(
+            <h1 key={i} className="text-base font-black text-slate-100 uppercase tracking-wider mb-4">
+              {trimmed.replace(/^#\s*/, "")}
+            </h1>
+          );
+        } else if (trimmed.startsWith("-") || trimmed.startsWith("*")) {
+          const content = trimmed.replace(/^[-*]\s*/, "");
+          elements.push(
+            <div key={i} className="flex items-start gap-2.5 pl-1.5 py-0.5">
+              <span className="text-cyber-cyan shrink-0 font-bold select-none mt-1">•</span>
+              <span className="flex-1">{parseBoldTags(content)}</span>
+            </div>
+          );
+        } else if (trimmed.match(/^\d+\./)) {
+          const matchPrefix = trimmed.match(/^\d+\./)?.[0] || "";
+          const content = trimmed.replace(/^\d+\.\s*/, "");
+          elements.push(
+            <div key={i} className="flex items-start gap-2.5 pl-1.5 py-0.5">
+              <span className="text-cyber-cyan font-mono text-[11px] shrink-0 select-none mt-0.5">{matchPrefix}</span>
+              <span className="flex-1">{parseBoldTags(content)}</span>
+            </div>
+          );
+        } else if (trimmed === "" || trimmed === "---") {
+          if (trimmed === "---") {
+            elements.push(<hr key={i} className="border-slate-800 my-5" />);
+          }
+        } else {
+          elements.push(<p key={i} className="leading-relaxed">{parseBoldTags(trimmed)}</p>);
+        }
+      }
+    }
+
+    if (inTable) {
+      const table = flushTable(lines.length);
+      if (table) elements.push(table);
+    }
+
     return (
       <div className="space-y-3.5 font-sans text-slate-300 text-xs md:text-sm leading-relaxed">
-        {lines.map((line, index) => {
-          const trimmed = line.trim();
-
-          if (trimmed.startsWith("###")) {
-            return (
-              <h3 key={index} className="text-xs font-mono font-black text-cyber-cyan border-b border-slate-800 pb-1.5 mt-6 first:mt-0 uppercase tracking-widest">
-                {trimmed.replace(/^###\s*/, "")}
-              </h3>
-            );
-          }
-          if (trimmed.startsWith("##")) {
-            return (
-              <h2 key={index} className="text-sm font-bold text-slate-200 mt-6 pb-2 border-b border-slate-850 uppercase tracking-tight">
-                {trimmed.replace(/^##\s*/, "")}
-              </h2>
-            );
-          }
-          if (trimmed.startsWith("#")) {
-            return (
-              <h1 key={index} className="text-base font-black text-slate-100 uppercase tracking-wider mb-4">
-                {trimmed.replace(/^#\s*/, "")}
-              </h1>
-            );
-          }
-          if (trimmed.startsWith("-") || trimmed.startsWith("*")) {
-            const content = trimmed.replace(/^[-*]\s*/, "");
-            return (
-              <div key={index} className="flex items-start gap-2.5 pl-1.5 py-0.5">
-                <span className="text-cyber-cyan shrink-0 font-bold select-none mt-1">•</span>
-                <span className="flex-1">{parseBoldTags(content)}</span>
-              </div>
-            );
-          }
-          if (trimmed.match(/^\d+\./)) {
-            const matchPrefix = trimmed.match(/^\d+\./)?.[0] || "";
-            const content = trimmed.replace(/^\d+\.\s*/, "");
-            return (
-              <div key={index} className="flex items-start gap-2.5 pl-1.5 py-0.5">
-                <span className="text-cyber-cyan font-mono text-[11px] shrink-0 select-none mt-0.5">{matchPrefix}</span>
-                <span className="flex-1">{parseBoldTags(content)}</span>
-              </div>
-            );
-          }
-          if (trimmed === "" || trimmed === "---") {
-            return trimmed === "---" ? <hr key={index} className="border-slate-800 my-5" /> : null;
-          }
-          return <p key={index} className="leading-relaxed">{parseBoldTags(trimmed)}</p>;
-        })}
+        {elements}
       </div>
     );
   };
@@ -377,13 +451,13 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
       active: true,
     },
     {
-      id: "terms",
-      title: "Key Terms Extractor",
-      description: "Identifies and extracts critical academic formulas, equations, definitions, and abbreviations.",
+      id: "key_terms",
+      title: "Key Terms & Definitions",
+      description: "Identifies, extracts, and organizes core academic terms, glossary definitions, abbreviations, and formulas strictly present in the PDF.",
       icon: FileSearch,
-      badge: "Phase 13.4",
-      badgeColor: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
-      active: false,
+      badge: "Active MVP",
+      badgeColor: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+      active: true,
     },
     {
       id: "chatbot",
@@ -452,23 +526,29 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
           </div>
           
           {quota ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="flex justify-between items-center bg-slate-950 px-3 py-2 rounded-lg border border-slate-850">
                 <span className="text-[11px] text-slate-400 font-mono">PDF Summary:</span>
-                <span className={`text-[11px] font-bold ${quota.remaining.pdf_summary > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {quota.remaining.pdf_summary} / {quota.limits.pdf_summary} remaining
+                <span className={`text-[11px] font-bold ${(quota.remaining?.pdf_summary ?? 10) > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {quota.remaining?.pdf_summary ?? 10} / {quota.limits?.pdf_summary ?? 10}
                 </span>
               </div>
               <div className="flex justify-between items-center bg-slate-950 px-3 py-2 rounded-lg border border-slate-850">
-                <span className="text-[11px] text-slate-400 font-mono">Important Questions:</span>
-                <span className={`text-[11px] font-bold ${quota.remaining.important_questions > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {quota.remaining.important_questions} / {quota.limits.important_questions} remaining
+                <span className="text-[11px] text-slate-400 font-mono">Questions:</span>
+                <span className={`text-[11px] font-bold ${(quota.remaining?.important_questions ?? 10) > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {quota.remaining?.important_questions ?? 10} / {quota.limits?.important_questions ?? 10}
                 </span>
               </div>
               <div className="flex justify-between items-center bg-slate-950 px-3 py-2 rounded-lg border border-slate-850">
                 <span className="text-[11px] text-slate-400 font-mono">Short Notes:</span>
-                <span className={`text-[11px] font-bold ${quota.remaining.short_notes > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {quota.remaining.short_notes} / {quota.limits.short_notes} remaining
+                <span className={`text-[11px] font-bold ${(quota.remaining?.short_notes ?? 10) > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {quota.remaining?.short_notes ?? 10} / {quota.limits?.short_notes ?? 10}
+                </span>
+              </div>
+              <div className="flex justify-between items-center bg-slate-950 px-3 py-2 rounded-lg border border-slate-850">
+                <span className="text-[11px] text-slate-400 font-mono">Key Terms:</span>
+                <span className={`text-[11px] font-bold ${(quota.remaining?.key_terms ?? 10) > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {quota.remaining?.key_terms ?? 10} / {quota.limits?.key_terms ?? 10}
                 </span>
               </div>
             </div>
@@ -709,8 +789,10 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
                     <FileText className="w-5 h-5 text-cyber-cyan" />
                   ) : activeAction === "questions" ? (
                     <GraduationCap className="w-5 h-5 text-cyber-cyan" />
-                  ) : (
+                  ) : activeAction === "short_notes" ? (
                     <Brain className="w-5 h-5 text-cyber-cyan" />
+                  ) : (
+                    <FileSearch className="w-5 h-5 text-cyber-cyan" />
                   )}
                   <div>
                     <h3 className="text-xs font-mono font-extrabold text-slate-200 uppercase tracking-wider">
@@ -718,7 +800,9 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
                         ? "Academic Material Summary" 
                         : activeAction === "questions" 
                         ? "Important Practice Questions" 
-                        : "Academic Short Notes"
+                        : activeAction === "short_notes"
+                        ? "Academic Short Notes"
+                        : "Key Terms & Definitions"
                       }
                     </h3>
                     <p className="text-[10px] text-slate-500 truncate max-w-[200px] md:max-w-[400px]" title={selectedMaterial?.title}>
@@ -776,7 +860,9 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
                         ? "Running internal PDF fetching, extracting text chunks, and structuring overview digests..."
                         : activeAction === "questions"
                         ? "Compiling vocabulary syllabus matrices and synthesizing dual, medium, and exam-focused essay worksheets..."
-                        : "Synthesizing topic outlines, definitions, core concepts, and exam revision guides..."
+                        : activeAction === "short_notes"
+                        ? "Synthesizing topic outlines, definitions, core concepts, and exam revision guides..."
+                        : "Extracting glossary definitions, abbreviations, formulas, and concept quick recall points..."
                       }
                     </p>
                   </div>
@@ -911,6 +997,8 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
                   ? 'important_questions' 
                   : feat.id === 'short_notes' 
                   ? 'short_notes' 
+                  : feat.id === 'key_terms'
+                  ? 'key_terms'
                   : null;
                   
                 const hasQuota = quota && actionKey ? quota.remaining[actionKey] > 0 : true;
@@ -991,7 +1079,7 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
                       ) : (
                         <button
                           id={`btn-generate-${feat.id}`}
-                          onClick={() => handleTriggerAiAction(feat.id as "summary" | "questions" | "short_notes")}
+                          onClick={() => handleTriggerAiAction(feat.id as "summary" | "questions" | "short_notes" | "key_terms")}
                           disabled={aiLoading}
                           className="w-full text-left flex items-center justify-between text-cyber-cyan group-hover:text-slate-100 transition-colors"
                         >

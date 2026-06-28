@@ -15,7 +15,8 @@ import {
   ExternalLink,
   ChevronRight,
   ShieldCheck,
-  Brain
+  Brain,
+  FileSearch
 } from "lucide-react";
 import { StudentProfile } from "../../types";
 import { auth } from "../../firebase/firebaseConfig";
@@ -34,7 +35,7 @@ interface HistoryItem {
   semester: string;
   year: string;
   department: string;
-  action: "pdf_summary" | "important_questions" | "short_notes";
+  action: "pdf_summary" | "important_questions" | "short_notes" | "key_terms";
   actionLabel: string;
   outputPreview: string;
   output: string;
@@ -49,7 +50,7 @@ export const AIHistoryView: React.FC<AIHistoryViewProps> = ({ user }) => {
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "pdf_summary" | "important_questions" | "short_notes">("all");
+  const [filter, setFilter] = useState<"all" | "pdf_summary" | "important_questions" | "short_notes" | "key_terms">("all");
   const [selectedItem, setSelectedItem] = useState<HistoryItem | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
 
@@ -111,56 +112,126 @@ export const AIHistoryView: React.FC<AIHistoryViewProps> = ({ user }) => {
       );
     };
 
+    const elements: React.ReactNode[] = [];
+    let currentTableRows: string[][] = [];
+    let inTable = false;
+
+    const flushTable = (key: number) => {
+      if (currentTableRows.length === 0) return null;
+      // Filter out separator rows, e.g. containing only dashes, colons, or pipes
+      const filteredRows = currentTableRows.filter(row => {
+        const joined = row.join("").trim();
+        return !joined.match(/^[:\s-|]+$/);
+      });
+
+      if (filteredRows.length === 0) {
+        currentTableRows = [];
+        return null;
+      }
+
+      const headers = filteredRows[0];
+      const bodyRows = filteredRows.slice(1);
+
+      const tableEl = (
+        <div key={`table-${key}`} className="my-5 overflow-x-auto rounded-lg border border-slate-800 bg-slate-900/40">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="bg-slate-900/80 border-b border-slate-800">
+                {headers.map((cell, cellIdx) => (
+                  <th key={cellIdx} className="p-3 font-mono font-bold text-cyber-cyan tracking-wider">
+                    {parseBoldTags(cell.trim())}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60">
+              {bodyRows.map((row, rowIdx) => (
+                <tr key={rowIdx} className="hover:bg-slate-900/20 transition-colors">
+                  {row.map((cell, cellIdx) => (
+                    <td key={cellIdx} className="p-3 text-slate-300 leading-normal">
+                      {parseBoldTags(cell.trim())}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+
+      currentTableRows = [];
+      return tableEl;
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+        inTable = true;
+        // Split by '|', skip the first and last empty elements
+        const cells = line.split("|").slice(1, -1);
+        currentTableRows.push(cells);
+      } else {
+        if (inTable) {
+          const table = flushTable(i);
+          if (table) elements.push(table);
+          inTable = false;
+        }
+
+        if (trimmed.startsWith("###")) {
+          elements.push(
+            <h3 key={i} className="text-xs font-mono font-black text-cyber-cyan border-b border-slate-800 pb-1.5 mt-6 first:mt-0 uppercase tracking-widest">
+              {trimmed.replace(/^###\s*/, "")}
+            </h3>
+          );
+        } else if (trimmed.startsWith("##")) {
+          elements.push(
+            <h2 key={i} className="text-sm font-bold text-slate-200 mt-6 pb-2 border-b border-slate-850 uppercase tracking-tight">
+              {trimmed.replace(/^##\s*/, "")}
+            </h2>
+          );
+        } else if (trimmed.startsWith("#")) {
+          elements.push(
+            <h1 key={i} className="text-base font-black text-slate-100 uppercase tracking-wider mb-4">
+              {trimmed.replace(/^#\s*/, "")}
+            </h1>
+          );
+        } else if (trimmed.startsWith("-") || trimmed.startsWith("*")) {
+          const content = trimmed.replace(/^[-*]\s*/, "");
+          elements.push(
+            <div key={i} className="flex items-start gap-2.5 pl-1.5 py-0.5">
+              <span className="text-cyber-cyan shrink-0 font-bold select-none mt-1">•</span>
+              <span className="flex-1">{parseBoldTags(content)}</span>
+            </div>
+          );
+        } else if (trimmed.match(/^\d+\./)) {
+          const matchPrefix = trimmed.match(/^\d+\./)?.[0] || "";
+          const content = trimmed.replace(/^\d+\.\s*/, "");
+          elements.push(
+            <div key={i} className="flex items-start gap-2.5 pl-1.5 py-0.5">
+              <span className="text-cyber-cyan font-mono text-[11px] shrink-0 select-none mt-0.5">{matchPrefix}</span>
+              <span className="flex-1">{parseBoldTags(content)}</span>
+            </div>
+          );
+        } else if (trimmed === "" || trimmed === "---") {
+          if (trimmed === "---") {
+            elements.push(<hr key={i} className="border-slate-800 my-5" />);
+          }
+        } else {
+          elements.push(<p key={i} className="leading-relaxed">{parseBoldTags(trimmed)}</p>);
+        }
+      }
+    }
+
+    if (inTable) {
+      const table = flushTable(lines.length);
+      if (table) elements.push(table);
+    }
+
     return (
       <div className="space-y-3.5 font-sans text-slate-300 text-xs md:text-sm leading-relaxed">
-        {lines.map((line, index) => {
-          const trimmed = line.trim();
-
-          if (trimmed.startsWith("###")) {
-            return (
-              <h3 key={index} className="text-xs font-mono font-black text-cyber-cyan border-b border-slate-800 pb-1.5 mt-6 first:mt-0 uppercase tracking-widest">
-                {trimmed.replace(/^###\s*/, "")}
-              </h3>
-            );
-          }
-          if (trimmed.startsWith("##")) {
-            return (
-              <h2 key={index} className="text-sm font-bold text-slate-200 mt-6 pb-2 border-b border-slate-850 uppercase tracking-tight">
-                {trimmed.replace(/^##\s*/, "")}
-              </h2>
-            );
-          }
-          if (trimmed.startsWith("#")) {
-            return (
-              <h1 key={index} className="text-base font-black text-slate-100 uppercase tracking-wider mb-4">
-                {trimmed.replace(/^#\s*/, "")}
-              </h1>
-            );
-          }
-          if (trimmed.startsWith("-") || trimmed.startsWith("*")) {
-            const content = trimmed.replace(/^[-*]\s*/, "");
-            return (
-              <div key={index} className="flex items-start gap-2.5 pl-1.5 py-0.5">
-                <span className="text-cyber-cyan shrink-0 font-bold select-none mt-1">•</span>
-                <span className="flex-1">{parseBoldTags(content)}</span>
-              </div>
-            );
-          }
-          if (trimmed.match(/^\d+\./)) {
-            const matchPrefix = trimmed.match(/^\d+\./)?.[0] || "";
-            const content = trimmed.replace(/^\d+\.\s*/, "");
-            return (
-              <div key={index} className="flex items-start gap-2.5 pl-1.5 py-0.5">
-                <span className="text-cyber-cyan font-mono text-[11px] shrink-0 select-none mt-0.5">{matchPrefix}</span>
-                <span className="flex-1">{parseBoldTags(content)}</span>
-              </div>
-            );
-          }
-          if (trimmed === "" || trimmed === "---") {
-            return trimmed === "---" ? <hr key={index} className="border-slate-800 my-5" /> : null;
-          }
-          return <p key={index} className="leading-relaxed">{parseBoldTags(trimmed)}</p>;
-        })}
+        {elements}
       </div>
     );
   };
@@ -323,6 +394,16 @@ export const AIHistoryView: React.FC<AIHistoryViewProps> = ({ user }) => {
               >
                 Short Notes ({items.filter(i => i.action === 'short_notes').length})
               </button>
+              <button
+                onClick={() => setFilter("key_terms")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold uppercase transition-all cursor-pointer border ${
+                  filter === "key_terms" 
+                    ? "bg-cyan-500/10 text-cyber-cyan border-cyan-500/20" 
+                    : "text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-800/40"
+                }`}
+              >
+                Key Terms ({items.filter(i => i.action === 'key_terms').length})
+              </button>
             </div>
           </div>
 
@@ -358,7 +439,7 @@ export const AIHistoryView: React.FC<AIHistoryViewProps> = ({ user }) => {
                 </h3>
                 <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
                   {filter === "all" 
-                    ? "Generate an academic summary, practice questions, or short revision notes for any document inside the AI Assistant, and they will securely appear in your archive here."
+                    ? "Generate an academic summary, practice questions, short revision notes, or key terms for any document inside the AI Assistant, and they will securely appear in your archive here."
                     : "No historical generations match the selected category."}
                 </p>
               </div>
@@ -378,8 +459,10 @@ export const AIHistoryView: React.FC<AIHistoryViewProps> = ({ user }) => {
                           <FileText className="w-4 h-4 text-cyber-cyan" />
                         ) : item.action === "important_questions" ? (
                           <GraduationCap className="w-4 h-4 text-cyber-cyan" />
-                        ) : (
+                        ) : item.action === "short_notes" ? (
                           <Brain className="w-4 h-4 text-cyber-cyan" />
+                        ) : (
+                          <FileSearch className="w-4 h-4 text-cyber-cyan" />
                         )}
                       </div>
                       <div className="text-left">

@@ -60,12 +60,13 @@ router.get('/quota-status', verifyFirebaseToken, loadUserProfile, async (req, re
     const docRef = adminDb.collection('aiUsageDaily').doc(`${req.uid}_${dateKey}`);
     const doc = await docRef.get();
     
-    const used = doc.exists ? doc.data().used : { pdf_summary: 0, important_questions: 0, short_notes: 0 };
+    const used = doc.exists ? doc.data().used : { pdf_summary: 0, important_questions: 0, short_notes: 0, key_terms: 0 };
     const limits = aiConfig.studentDailyLimits;
     const remaining = {
       pdf_summary: Math.max(0, limits.pdf_summary - (used.pdf_summary || 0)),
       important_questions: Math.max(0, limits.important_questions - (used.important_questions || 0)),
-      short_notes: Math.max(0, limits.short_notes - (used.short_notes || 0))
+      short_notes: Math.max(0, limits.short_notes - (used.short_notes || 0)),
+      key_terms: Math.max(0, limits.key_terms - (used.key_terms || 0))
     };
 
     res.json({
@@ -136,7 +137,7 @@ router.get('/history', verifyFirebaseToken, loadUserProfile, async (req, res) =>
         year: material.year || "N/A",
         department: material.department || "N/A",
         action: data.action,
-        actionLabel: data.action === 'pdf_summary' ? 'PDF Summary' : data.action === 'important_questions' ? 'Important Questions' : 'Short Notes',
+        actionLabel: data.action === 'pdf_summary' ? 'PDF Summary' : data.action === 'important_questions' ? 'Important Questions' : data.action === 'short_notes' ? 'Short Notes' : data.action === 'key_terms' ? 'Key Terms & Definitions' : 'Unknown Action',
         outputPreview: data.output ? data.output.substring(0, 150) + "..." : "",
         output: data.output || "",
         cached: true,
@@ -228,7 +229,7 @@ router.get('/history/:id', verifyFirebaseToken, loadUserProfile, async (req, res
         year: material.year || "N/A",
         department: material.department || "N/A",
         action: data.action,
-        actionLabel: data.action === 'pdf_summary' ? 'PDF Summary' : data.action === 'important_questions' ? 'Important Questions' : 'Short Notes',
+        actionLabel: data.action === 'pdf_summary' ? 'PDF Summary' : data.action === 'important_questions' ? 'Important Questions' : data.action === 'short_notes' ? 'Short Notes' : data.action === 'key_terms' ? 'Key Terms & Definitions' : 'Unknown Action',
         output: data.output || "",
         cached: true,
         cacheSource: "fresh-cache",
@@ -603,6 +604,44 @@ router.post('/short-notes', verifyFirebaseToken, loadUserProfile, async (req, re
       ok: false,
       code: err.code || "INTERNAL_ERROR",
       message: err.message || "An internal error occurred during short notes generation.",
+      retryable: err.retryable !== undefined ? err.retryable : false,
+      stage: err.stage || "provider_generation",
+      quality: err.quality || null,
+      modelsAttempted: err.modelsAttempted || null
+    });
+  }
+});
+
+/**
+ * POST /api/ai/key-terms
+ * Generates academic key terms and definitions for the requested material.
+ * Accessible to any authenticated student, faculty, or admin who has access to the material.
+ */
+router.post('/key-terms', verifyFirebaseToken, loadUserProfile, async (req, res) => {
+  try {
+    const { materialId } = req.body || {};
+    if (!materialId) {
+      return res.status(400).json({
+        ok: false,
+        code: "MISSING_MATERIAL_ID",
+        message: "Missing required parameter 'materialId' in request body."
+      });
+    }
+
+    const result = await generateAcademicAiOutput({
+      uid: req.uid,
+      role: req.userProfile.role,
+      userProfile: req.userProfile
+    }, materialId, 'key_terms');
+    return res.json(result);
+  } catch (err) {
+    console.error(`[AI Key Terms Route Error] Material ${req.body?.materialId}:`, err);
+    
+    const status = err.status || 500;
+    return res.status(status).json({
+      ok: false,
+      code: err.code || "INTERNAL_ERROR",
+      message: err.message || "An internal error occurred during key terms generation.",
       retryable: err.retryable !== undefined ? err.retryable : false,
       stage: err.stage || "provider_generation",
       quality: err.quality || null,

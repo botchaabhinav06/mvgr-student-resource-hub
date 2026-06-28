@@ -67,7 +67,7 @@ async function incrementQuota(uid, action) {
         dateKey,
         timezone: 'Asia/Kolkata',
         limits: { ...aiConfig.studentDailyLimits },
-        used: { pdf_summary: 0, important_questions: 0, short_notes: 0 },
+        used: { pdf_summary: 0, important_questions: 0, short_notes: 0, key_terms: 0 },
         updatedAt: new Date()
       };
     } else {
@@ -84,7 +84,8 @@ async function incrementQuota(uid, action) {
     remaining: {
       pdf_summary: aiConfig.studentDailyLimits.pdf_summary - (data.used.pdf_summary || 0),
       important_questions: aiConfig.studentDailyLimits.important_questions - (data.used.important_questions || 0),
-      short_notes: aiConfig.studentDailyLimits.short_notes - (data.used.short_notes || 0)
+      short_notes: aiConfig.studentDailyLimits.short_notes - (data.used.short_notes || 0),
+      key_terms: aiConfig.studentDailyLimits.key_terms - (data.used.key_terms || 0)
     },
     dateKey
   };
@@ -124,6 +125,7 @@ export function prepareAcademicTextForPrompt(extractedText, action) {
     pdf_summary: 22000,
     important_questions: 24000,
     short_notes: 24000,
+    key_terms: 24000,
   };
   
   const limit = charLimits[action] || 12000;
@@ -188,7 +190,7 @@ async function logAiUsage({ uid, role, action, materialId, cached, model, qualit
  */
 export async function generateAcademicAiOutput(context, materialId, action) {
   const { uid, role, userProfile } = context;
-  if (action !== 'pdf_summary' && action !== 'important_questions' && action !== 'short_notes') {
+  if (action !== 'pdf_summary' && action !== 'important_questions' && action !== 'short_notes' && action !== 'key_terms') {
     throw { status: 400, code: "INVALID_ACTION", message: "Unsupported AI action type requested." };
   }
 
@@ -466,6 +468,47 @@ Provide quick, punchy revision bullet points perfect for last-minute cramming.
 
 ### 4. Key Exam Revision Focus Areas
 Identify critical focus areas based purely on the given content that a student should revise carefully.
+
+---
+Source PDF Extracted Text:
+${textForPrompt}
+---
+`;
+  } else if (action === 'key_terms') {
+    promptText = `
+You are an expert academic tutor, definitions designer, and technical glossary writer.
+Extract important academic terms, definitions, concepts, formulas, abbreviations, and exam-useful keywords from the study material provided below.
+
+Strict Constraints:
+1. Use ONLY the concepts and facts directly present in the provided text. Do not invent terms, formulas, abbreviation expansions, or outside details.
+2. If formulas/rules are not explicitly present in the provided PDF text, state "No explicit formulas were found in the provided material." in that section. Do not list generic equations not in the text.
+3. If abbreviations/acronyms are not explicitly present, state "No major abbreviations were found in the provided material." in that section.
+4. Keep definitions highly concise, accurate, objective, and exam-friendly.
+
+Format your output EXACTLY as follows in Markdown:
+
+# Key Terms & Definitions
+
+## 1. Core Terms
+| Term | Definition | Why It Matters |
+| :--- | :--- | :--- |
+(Provide a table of core terms, concepts, and key definitions found in the text. Use the exact columns: Term, Definition, Why It Matters)
+
+## 2. Important Abbreviations
+| Abbreviation | Full Form | Meaning |
+| :--- | :--- | :--- |
+(Provide a table of abbreviations found in the text. If empty, output "No major abbreviations were found in the provided material." instead of a table)
+
+## 3. Important Formulas / Rules
+| Formula / Rule | Meaning | When to Use |
+| :--- | :--- | :--- |
+(Provide a table of formulas, mathematical rules, or physical laws found in the text. If empty, output "No explicit formulas were found in the provided material." instead of a table)
+
+## 4. Concept Quick Recall
+(List major concepts as neat, one-line summary bullet points, e.g., * Concept: one-line explanation)
+
+## 5. Exam Revision Keywords
+(Provide a bulleted list of high-priority keywords, e.g., * keyword)
 
 ---
 Source PDF Extracted Text:

@@ -255,10 +255,10 @@ export const AdminAIControlView: React.FC<AdminAIControlViewProps> = ({ material
   };
 
   const globalToggles = [
-    { id: "summary", name: "PDF Summarizer", active: true, phase: "Phase 13.2" },
-    { id: "questions", name: "Important Questions Generator", active: true, phase: "Phase 13.2" },
-    { id: "notes", name: "Short Notes Creator", active: false, phase: "Phase 13.4" },
-    { id: "terms", name: "Key Terms Extractor", active: false, phase: "Phase 13.4" },
+    { id: "summary", name: "PDF Summarizer", active: true, phase: "Active MVP" },
+    { id: "questions", name: "Important Questions Generator", active: true, phase: "Active MVP" },
+    { id: "notes", name: "Short Notes Creator", active: true, phase: "Active MVP" },
+    { id: "terms", name: "Key Terms Extractor", active: true, phase: "Active MVP" },
     { id: "chat", name: "Document Context Q&A", active: false, phase: "Phase 14.0" },
     { id: "mini", name: "Mini Study Assistant", active: false, phase: "Phase 14.1" },
   ];
