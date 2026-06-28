@@ -220,18 +220,11 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
         </div>
 
         {/* Action adjustments header or file info */}
-        <div className="h-11 px-6 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-xs font-mono text-slate-400 gap-4 flex-shrink-0">
+        <div className="h-11 px-6 bg-slate-900 border-b border-slate-800 flex items-center text-xs font-mono text-slate-400 gap-4 flex-shrink-0">
           <div className="flex items-center gap-2">
             <span className="text-slate-500">File:</span>
             <span className="text-slate-300 font-bold truncate max-w-[150px] sm:max-w-xs">{material.fileName}</span>
             <span className="text-cyber-violet font-bold">({material.fileSize})</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-slate-500">Provider:</span>
-            <span className="text-emerald-400 font-black uppercase text-[10px] bg-emerald-500/10 border border-emerald-500/25 px-1.5 py-0.5 rounded">
-              {material.storageProvider === "cloudflare-r2" ? "Cloudflare R2" : "Supabase"}
-            </span>
           </div>
         </div>
 
@@ -276,19 +269,15 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 text-[11px] font-mono">
+                <div className="grid grid-cols-1 gap-3 text-[11px] font-mono">
                   <div className="p-2.5 bg-slate-950 rounded-lg border border-slate-800/40">
                     <span className="text-slate-500 block mb-0.5 uppercase">Action context:</span>
                     <span className="text-slate-300 font-bold">{prevErrorDetails?.action || "preview"}</span>
                   </div>
-                  <div className="p-2.5 bg-slate-950 rounded-lg border border-slate-800/40">
-                    <span className="text-slate-500 block mb-0.5 uppercase">Provider:</span>
-                    <span className="text-slate-300 font-bold">cloudflare-r2</span>
-                  </div>
                 </div>
 
                 <div className="p-2.5 bg-slate-950 rounded-lg border border-slate-800/40 font-mono text-[11px] overflow-x-auto">
-                  <span className="text-slate-500 block mb-0.5 uppercase">R2 Storage Path:</span>
+                  <span className="text-slate-500 block mb-0.5 uppercase">Secure Storage Path:</span>
                   <span className="text-slate-300 break-all">{prevErrorDetails?.storagePath || material.storagePath || "N/A"}</span>
                 </div>
               </div>

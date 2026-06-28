@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Sparkles, Shield, ToggleLeft, Sliders, Activity, Key, Database, AlertCircle, RefreshCw, Layers, CheckCircle2, XCircle, Play, Loader2, FileText } from "lucide-react";
+import { Sparkles, Shield, ToggleLeft, Key, Database, AlertCircle, RefreshCw, Layers, CheckCircle2, XCircle, Play, Loader2, FileText } from "lucide-react";
 import { auth } from "../../firebase/firebaseConfig";
 import { apiUrl } from "../../lib/apiBase";
 
@@ -259,12 +259,6 @@ export const AdminAIControlView: React.FC<AdminAIControlViewProps> = ({ material
     { id: "questions", name: "Important Questions Generator", active: true, phase: "Active MVP" },
     { id: "notes", name: "Short Notes Creator", active: true, phase: "Active MVP" },
     { id: "terms", name: "Key Terms Extractor", active: true, phase: "Active MVP" },
-  ];
-
-  const limits = [
-    { role: "Student Quota", max: "5 Queries / Day", description: "Standard learning access scope" },
-    { role: "Faculty Quota", max: "10 Queries / Day", description: "Metadata extraction & summary draft scope" },
-    { role: "Admin Quota", max: "20 Queries / Day", description: "System diagnostics scope" },
   ];
 
   return (
@@ -893,61 +887,7 @@ export const AdminAIControlView: React.FC<AdminAIControlViewProps> = ({ material
             </div>
           </div>
 
-          {/* Rate Limits */}
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-            <div className="flex items-center gap-2">
-              <Sliders className="w-4 h-4 text-cyber-cyan" />
-              <h3 className="text-xs font-mono font-extrabold text-slate-300 uppercase tracking-widest">
-                Role Daily Quotas
-              </h3>
-            </div>
-            
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              Automatic daily user tracking logs are checked via secure database triggers prior to dispatching model queries.
-            </p>
 
-            <div className="space-y-3 pt-2">
-              {limits.map((l, index) => (
-                <div key={index} className="p-3 rounded-lg bg-slate-950 border border-slate-850 flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <span className="text-xs font-bold text-slate-300">{l.role}</span>
-                    <p className="text-[10px] text-slate-500">{l.description}</p>
-                  </div>
-                  <span className="px-2 py-1 text-[10px] font-mono font-bold bg-cyan-500/10 text-cyber-cyan border border-cyan-500/20 rounded">
-                    {l.max}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Planned Performance Metrics Monitor */}
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-cyber-cyan" />
-                <h3 className="text-xs font-mono font-extrabold text-slate-300 uppercase tracking-widest">
-                  Live Usage Tracker
-                </h3>
-              </div>
-              <span className="text-[9px] font-mono text-slate-500">Planned</span>
-            </div>
-
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              Under development. Analytics widgets will load direct database aggregation counters for token allocation audit trails.
-            </p>
-
-            <div className="grid grid-cols-2 gap-3 pt-2 font-mono text-[10px] font-bold">
-              <div className="p-3 bg-slate-950 rounded-lg border border-slate-850 text-center">
-                <span className="text-slate-500 block text-[9px] uppercase tracking-wider mb-1">Total Hits</span>
-                <span className="text-slate-400 font-extrabold text-xs">--</span>
-              </div>
-              <div className="p-3 bg-slate-950 rounded-lg border border-slate-850 text-center">
-                <span className="text-slate-500 block text-[9px] uppercase tracking-wider mb-1">Errors Logged</span>
-                <span className="text-slate-400 font-extrabold text-xs">--</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

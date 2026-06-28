@@ -342,3 +342,12 @@ To eliminate security risks found during manual review, the rules have been heav
 
 ---
 
+## 15. Phase 13.6C — Production UI Polish
+
+To elevate user experience, protect cloud infrastructure privacy, and remove outdated layouts, we have implemented several UI cleanups:
+1. **Infrastructure Privacy Guard**: The Cloudflare R2 / Supabase storage provider labels and badges have been completely hidden from the PDF Secure Reader view. End-user interactions remain streamlined without exposing internal storage topology.
+2. **Outdated Quota Widgets Removed**: Outdated static cards detailing student, faculty, and admin query limits (which were inconsistent with the dynamic per-action student AI quota design) have been cleaned from the Admin AI dashboard.
+3. **Live Usage Tracker Decoupled**: The planned "Live Usage Tracker" placeholder widget has been cleanly decoupled, keeping the interface professional, comprehensive, and focused purely on active, production-ready modules.
+
+---
+
