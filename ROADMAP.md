@@ -16,6 +16,8 @@
 - ✅ **Phase 13.2**: Cache-first (Firestore lookup) PDF Summarizer and MVGR-aligned Question Generator MVP with full Student Assistant Workspace integration.
 - ✅ **Phase 13.3**: Usage Monitoring & Per-User Daily Rate Limiters with live Daily AI Quota panels.
 - ✅ **Phase 13.4**: AI Output History & Saved Results secure archive with strict access control and zero-quota viewing.
+- ✅ **Phase 13.7**: Firestore Production Security Rules Lock down with zero-trust roles isolation.
+- ✅ **Phase 13.7A**: Firestore Rules Hardening Patch to enforce department-scoped material read isolation, admin-only profile creation, owner-restricted profile updates, and secure context-locked material downloads.
 
 ## Future Scope (Planned)
 

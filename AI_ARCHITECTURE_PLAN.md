@@ -305,3 +305,32 @@ Rather than using complex external third-party services, the Node/Express backen
 ```
 
 Each phase will run comprehensive regression audits to ensure student access scopes and storage policies are kept in perfect working order.
+
+---
+
+## 13. Phase 13.7 — Firestore Production Security Rules Lock
+
+To safeguard sensitive institutional resources, student records, and intellectual property, we have locked down our database with zero-trust production security rules:
+
+### A. Core Architecture Boundaries
+1. **Direct Firestore Client Collections**:
+   * `/users/{userId}`: Strict owner-only reads/updates for academic details (year, semester) with immutable roles, emails, status, and departments. Admin bypass allows full read/write management. Faculty/Admin lists are allowed for directory/analytics lookup.
+   * `/materials/{materialId}`: Curated course materials. Students have read-only access (to active ones) and are permitted only to atomically increment `downloadsCount`. Faculty/Admin have write (create, update, delete) controls.
+   * `/reports/{reportId}`: Discrepancy reports. Students are locked to creating/reading only tickets referencing their own register number. Faculty/Admin have full management and resolution controls.
+2. **Backend-Only / System Collections**:
+   * `/aiOutputs/{outputId}`: Cached AI results. Clients have **zero direct access** (read/write are strictly denied), ensuring all interaction remains safely proxied through the Express.js backend.
+   * `/aiUsage/{id}` & `/aiUsageDaily/{id}`: AI usage tracking. Clients have **zero direct access** to avoid quota tampering or Denial of Wallet attacks.
+
+---
+
+## 14. Phase 13.7A — Firestore Rules Hardening Patch
+
+To eliminate security risks found during manual review, the rules have been heavily hardened:
+1. **Department-Scoped Material Isolation**: Students are strictly prohibited from viewing any material outside of their registered academic department. Direct queries in `src/App.tsx` have been updated to filter by `currentUser.department` to ensure absolute compliance and prevent query permission failures.
+2. **Admin-Only User Creation**: Standard users can no longer self-create or self-promote user documents. The `create` block for `/users/{userId}` is strictly limited to users with the `admin` role.
+3. **Restricted Owner Profile Updates**: Students cannot modify their role, status, register number, department, or email. They can only modify safe transient fields: `year`, `semester`, `norm_year`, `norm_semester`, `currentYear`, `currentSemester`, and `updatedAt`.
+4. **Context-Locked Material Downloads**: Download count updates are verified to ensure they only atomically increment the `downloadsCount` of active materials belonging to the student's own department.
+5. **Private System Collections**: The `aiOutputs`, `aiUsage`, and `aiUsageDaily` collections remain strictly denied to any client-side reads/writes.
+
+---
+

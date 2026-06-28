@@ -186,7 +186,11 @@ export default function App() {
     const materialsCol = collection(db, "materials");
     let q;
     if (currentUser.role === "student") {
-      q = query(materialsCol, where("status", "==", "active"));
+      q = query(
+        materialsCol,
+        where("status", "==", "active"),
+        where("department", "==", (currentUser as StudentProfile).department || "IT")
+      );
     } else {
       q = query(materialsCol);
     }
