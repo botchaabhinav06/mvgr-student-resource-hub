@@ -351,3 +351,13 @@ To elevate user experience, protect cloud infrastructure privacy, and remove out
 
 ---
 
+## 16. Phase 13.6D — Forgot Password / Password Reset Flow
+
+To facilitate account accessibility while preserving strict security and zero-knowledge privacy standards, we have implemented a production-ready Password Reset solution:
+1. **UI Entry Point**: Added a sleek, high-contrast, theme-aware "Forgot password?" trigger link right below the Password field on the core login portal, maintaining full styling alignment with the dark cyber aesthetic.
+2. **Institutional Guard & Validation**: Built rigid front-end checks restricting password resets to valid email patterns ending in `@mvgr.edu` or `@mvgrce.edu.in`.
+3. **Obscured User Existence Check**: Aligned with modern zero-knowledge security best practices. If a reset is triggered, the interface never discloses whether the email exists in Firebase Auth. Unregistered emails receive the same standard success screen as registered users.
+4. **Firebase Auth Integration**: Uses native `sendPasswordResetEmail` to handle cryptographically secure token generation and delivery directly through Firebase's SMTP relay.
+
+---
+

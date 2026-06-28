@@ -5,7 +5,7 @@ import { Sparkles, Terminal, Box, Shield, ArrowRight, CornerDownRight, LogOut, C
 import { ActiveScreen, StudentProfile, FacultyProfile, Material, IssueReport } from "./types";
 
 // Firebase integrations
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from "firebase/auth";
 import { doc, getDoc, onSnapshot, collection, query, where, setDoc, updateDoc, deleteDoc, writeBatch } from "firebase/firestore";
 import { auth, db, handleFirestoreError, OperationType } from "./firebase/firebaseConfig";
 
@@ -105,6 +105,13 @@ export default function App() {
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
   const [authInitializing, setAuthInitializing] = useState(true);
+
+  // Forgot Password / Password Reset State
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetSuccessMessage, setResetSuccessMessage] = useState("");
+  const [resetErrorMessage, setResetErrorMessage] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
 
   // System Core Collections State
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -412,6 +419,58 @@ export default function App() {
       setLoginError(msg);
     } finally {
       setLoginLoading(false);
+    }
+  };
+
+  const handleForgotClick = () => {
+    setResetEmail(loginEmail);
+    setResetErrorMessage("");
+    setResetSuccessMessage("");
+    setResetModalOpen(true);
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = resetEmail.trim();
+
+    if (!email) {
+      setResetErrorMessage("PLEASE ENTER AN EMAIL ADDRESS.");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setResetErrorMessage("Please enter a valid institutional email.");
+      return;
+    }
+
+    const lowerEmail = email.toLowerCase();
+    if (!lowerEmail.endsWith("@mvgr.edu") && !lowerEmail.endsWith("@mvgrce.edu.in")) {
+      setResetErrorMessage("Please enter a valid institutional email (@mvgrce.edu.in or @mvgr.edu).");
+      return;
+    }
+
+    setResetLoading(true);
+    setResetErrorMessage("");
+    setResetSuccessMessage("");
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setResetSuccessMessage("Password reset link sent. Please check your institutional email inbox and spam folder.");
+    } catch (error: any) {
+      console.warn("Password reset failure details obscured for safety.");
+      const errorCode = error?.code || "";
+      if (errorCode === "auth/invalid-email") {
+        setResetErrorMessage("Please enter a valid institutional email.");
+      } else if (errorCode === "auth/network-request-failed") {
+        setResetErrorMessage("Network issue. Please try again.");
+      } else if (errorCode === "auth/too-many-requests") {
+        setResetErrorMessage("Too many reset attempts. Please wait and try again later.");
+      } else {
+        setResetSuccessMessage("If this email is registered, a password reset link has been sent. Please check your inbox and spam folder.");
+      }
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -1178,6 +1237,15 @@ export default function App() {
                     )}
                   </button>
                 </div>
+                <div className="flex justify-end mt-1.5">
+                  <button
+                    type="button"
+                    onClick={handleForgotClick}
+                    className="text-[11px] font-mono font-bold text-theme-teal-action hover:text-theme-hero-main transition-colors cursor-pointer bg-transparent border-0 outline-none p-0"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
               </div>
 
               {loginError && (
@@ -1281,6 +1349,97 @@ export default function App() {
                 Yes, Logout
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password Reset Modal */}
+      {resetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+          <div className="w-full max-w-md rounded-2xl bg-slate-900 border border-slate-800 p-6 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-theme-teal-action animate-pulse" />
+                <h3 className="font-display font-black text-sm uppercase tracking-wider text-slate-100">
+                  Password Reset Request
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  setResetModalOpen(false);
+                  setResetErrorMessage("");
+                  setResetSuccessMessage("");
+                }}
+                className="text-slate-400 hover:text-slate-200 transition-colors cursor-pointer text-xs font-mono bg-slate-950 border border-slate-850 px-2 py-1 rounded"
+              >
+                Close
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-400 leading-relaxed font-sans">
+              Enter your registered MVGR institutional email. We'll dispatch a safe, self-signed link via Firebase Auth to reset your secure passcode.
+            </p>
+
+            <form onSubmit={handlePasswordReset} className="space-y-4">
+              <div>
+                <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest block mb-1.5 font-bold">
+                  Institutional Email Address
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-3.5 text-slate-500 font-mono text-xs font-bold uppercase">
+                    @:
+                  </span>
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. student@mvgr.edu"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 text-sm rounded-lg bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:border-theme-teal-action font-mono tracking-wide placeholder-slate-700 block"
+                  />
+                </div>
+              </div>
+
+              {resetErrorMessage && (
+                <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[11px] font-mono font-bold text-rose-400 text-center uppercase tracking-wide">
+                  {resetErrorMessage}
+                </div>
+              )}
+
+              {resetSuccessMessage && (
+                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-sans font-medium text-emerald-400 text-center leading-relaxed">
+                  {resetSuccessMessage}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetModalOpen(false);
+                    setResetErrorMessage("");
+                    setResetSuccessMessage("");
+                  }}
+                  className="px-4 py-3 rounded bg-slate-950 border border-slate-800 hover:bg-slate-850 text-xs text-slate-400 font-bold uppercase tracking-widest cursor-pointer transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={resetLoading}
+                  className="px-4 py-3 rounded bg-theme-teal-action/10 hover:bg-theme-teal-action/20 text-theme-teal-action border border-theme-teal-action/30 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all"
+                >
+                  {resetLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-theme-teal-action" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Send Link"
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

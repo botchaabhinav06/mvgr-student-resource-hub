@@ -18,6 +18,13 @@
 - ✅ **Phase 13.4**: AI Output History & Saved Results secure archive with strict access control and zero-quota viewing.
 - ✅ **Phase 13.7**: Firestore Production Security Rules Lock down with zero-trust roles isolation.
 - ✅ **Phase 13.7A**: Firestore Rules Hardening Patch to enforce department-scoped material read isolation, admin-only profile creation, owner-restricted profile updates, and secure context-locked material downloads.
+- ✅ **Phase 13.6D**: Secure Forgot Password / Password Reset self-service flow with generic error handling and strict institutional email restrictions.
+
+### Firebase Console Deployment Checklists
+To ensure the password reset flow behaves correctly in production:
+1. **Authentication → Templates**: Verify the "Password reset" email template layout and configure your custom sender domain/reply-to headers.
+2. **Authentication → Settings → Authorized domains**: Ensure your custom Vercel or Cloud Run domain is listed as an authorized domain to allow safe popups/redirect flows.
+3. **Sign-in Providers**: Ensure the Email/Password sign-in provider is enabled in the Firebase Auth console.
 
 ## Active Production AI Scope
 - ✅ **PDF Summary**: Grounded, high-yield structured lecture summarization focusing on key takeaways.
