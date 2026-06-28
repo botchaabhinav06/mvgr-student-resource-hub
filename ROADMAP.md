@@ -36,25 +36,25 @@ To ensure the password reset flow behaves correctly in production:
 - ✅ **Quota & Cost Control**: Per-user daily role rate-limiting with live quota status tracking.
 - ✅ **Admin AI Diagnostics**: Comprehensive backend telemetry, health smoke tests, and model discovery.
 
-## Removed from Current Production UI / Not in Current Release Scope
-These features have been safely decoupled and hidden from the user-facing interfaces to ensure a clean, focused production scope:
-* **Material Q&A Chatbot** (Temporarily shelved for future closed-circuit multi-turn iterations)
-* **Question Paper Helper** (Shelved for structured blueprint mapping optimization)
-* **Faculty AI Tools Activation** (Staff controls are dormant; AI suite remains dedicated to student study aids)
+- ✅ **Phase 14**: Final Production Release Lock (Stable, fully secured, and validated for release).
+
+## Removed / Deferred from Current Production UI (Not in Current Release Scope)
+These features have been safely decoupled and deferred to ensure maximum cost control, extreme security against LLM hallucinations, and a clean, highly focused production MVP:
+* **Material Q&A Chatbot**: (Deferred for future closed-circuit multi-turn context testing).
+* **Question Paper Helper**: (Deferred to allow syllabus blueprint coordinate grounding optimization).
+* **Faculty AI Tools Activation**: (Faculty sidebar AI tools links are deferred. The AI assistant is dedicated fully as a student revision aid).
 
 ## Future Scope (Planned)
 
-### Short-Term (AI Integration Phases)
-* **Phase 13.5**: Lecture Short Notes and Key Glossary Terms Extractors.
-* **Phase 14**: Context-bounded Material Chatbot & Exam Paper Guidelines Helper.
-* **Phase 14.1**: Multi-turn Cost-Controlled Mini Study Assistant.
-* **Phase 15**: Multi-User AI Privacy, Cost Performance, and Final Prompt Injection Audits.
+### Short-Term
+* **Phase 15**: Advanced prompt injection guards and IP-level request rate-limiting.
+* **Phase 15.1**: Multi-turn Cost-Controlled Mini Study Assistant.
 
 ### Mid-Term
-* **Advanced Reports**: Comprehensive faculty & admin dashboard with detailed academic activity insights.
+* **Advanced Reports**: Detailed analytics dashboard for faculty regarding students' study aid engagement levels.
 * **Bulk Data Operations**: Secure API endpoints for bulk user/material imports with strict validation.
-* **Web Push Notifications**: Automatic alerts for new material uploads and exam preparation updates.
 
 ### Long-Term
-* **Integrations**: LMS (Learning Management System) integrations.
-* **Adaptive Learning**: Personalized material recommendations based on student preferences and performance.
+* **LMS Integrations**: Seamless connections to standard university Learning Management Systems.
+* **Adaptive Learning Paths**: Personalized recommendations of revision documents based on student query history.
+

@@ -370,3 +370,33 @@ To address cases where active Firebase Auth users register using non-institution
 
 ---
 
+## 18. Phase 14 — Final Production Release Lock
+
+We have completed the absolute freeze and final production release lock of the AI integrations. The resulting platform adheres strictly to elite cost-control, security, and architectural rules:
+
+### A. Core Active Production AI Features
+The following four features are fully active and integrated into the student workspace:
+1. **PDF Summary**: Clear, structured, text-grounded summarizations.
+2. **Important Questions**: Syllabus-oriented practice sheets categorized by standard marks formats.
+3. **Short Notes**: Concise, bulleted study revision outlines.
+4. **Key Terms & Definitions**: Clear glossaries, formulas, and acronym breakdowns.
+
+All features utilize:
+* **Backend-Only Execution**: Powered by `gemini-3.1-flash-lite` (primary) and `gemini-3.5-flash` (fallback) via the `@google/genai` Node.js SDK on Render. No keys or direct SDK instances are exposed on Vercel/client.
+* **Aggressive Firestore Caching**: Cached in `/aiOutputs` (denied to direct client-side reads) and instantly returned for identical requests, guaranteeing $0.00 provider cost for cache hits.
+* **Meticulous Quota Counter**: Tracking of daily rates (10 requests/day per tool per student) using Asia/Kolkata dateKeys and atomic Firestore transactions.
+
+### B. Inactive / Deferred AI Scope
+To avoid user experience dilution and eliminate safety risks (e.g., chat context drift, unauthorized access), the following modules are strictly deactivated and removed from the active production UI:
+* **Material Q&A Chatbot**: Excluded from active student views.
+* **Question Paper Helper**: Decoupled from core tools.
+* **Faculty AI Suite**: Faculty sidebar links are removed, keeping the AI suite strictly student-oriented.
+
+### C. Known Limitations & Production Architecture Notes
+1. **IP-Level Rate Limiting**: General endpoint protection is delegated to upstream infrastructure proxies (e.g., Cloudflare, Render native DDoS mitigations) rather than custom in-memory node limits to ensure cluster scalability.
+2. **Static Electronic Text Limitation**: As per the PDF text quality/heuristic guard, scanned image PDFs will gracefully return an educational message requesting standard text-based documents, preventing costly and slower OCR processes.
+3. **Email Domains**: In compliance with Task 13.6D-1, the forgot password modal accepts any valid general email format, meaning personal Gmail and other verified accounts registered on Firebase can recover accounts easily, while the client maintains robust email-enumeration privacy protection.
+
+---
+
+
