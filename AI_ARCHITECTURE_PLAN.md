@@ -355,9 +355,18 @@ To elevate user experience, protect cloud infrastructure privacy, and remove out
 
 To facilitate account accessibility while preserving strict security and zero-knowledge privacy standards, we have implemented a production-ready Password Reset solution:
 1. **UI Entry Point**: Added a sleek, high-contrast, theme-aware "Forgot password?" trigger link right below the Password field on the core login portal, maintaining full styling alignment with the dark cyber aesthetic.
-2. **Institutional Guard & Validation**: Built rigid front-end checks restricting password resets to valid email patterns ending in `@mvgr.edu` or `@mvgrce.edu.in`.
+2. **Institutional Guard & Validation**: Built rigid front-end checks restricting password resets to valid email patterns.
 3. **Obscured User Existence Check**: Aligned with modern zero-knowledge security best practices. If a reset is triggered, the interface never discloses whether the email exists in Firebase Auth. Unregistered emails receive the same standard success screen as registered users.
 4. **Firebase Auth Integration**: Uses native `sendPasswordResetEmail` to handle cryptographically secure token generation and delivery directly through Firebase's SMTP relay.
+
+---
+
+## 17. Phase 13.6D-1 — Forgot Password Email Validation Hotfix
+
+To address cases where active Firebase Auth users register using non-institutional accounts (such as personal Gmail accounts), the password reset validation has been optimized:
+1. **Relaxed Validation**: Replaced the strict `@mvgr.edu` and `@mvgrce.edu.in` domain-matching rules with a standard, secure regex validation. Any properly formatted, registered email address is now fully accepted for password recovery.
+2. **Polished Copy**: Shifted the reset modal labels, description, and placeholders from institutional-only references to generalized registered user account terminology.
+3. **Privacy Preservation**: Maintained the robust email enumeration safeguard. Triggering a password reset continues to show a generic, security-safe confirmation screen regardless of whether the email exists in Firebase Auth.
 
 ---
 

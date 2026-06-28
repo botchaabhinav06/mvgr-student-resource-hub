@@ -440,13 +440,7 @@ export default function App() {
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setResetErrorMessage("Please enter a valid institutional email.");
-      return;
-    }
-
-    const lowerEmail = email.toLowerCase();
-    if (!lowerEmail.endsWith("@mvgr.edu") && !lowerEmail.endsWith("@mvgrce.edu.in")) {
-      setResetErrorMessage("Please enter a valid institutional email (@mvgrce.edu.in or @mvgr.edu).");
+      setResetErrorMessage("Please enter a valid email address.");
       return;
     }
 
@@ -456,12 +450,12 @@ export default function App() {
 
     try {
       await sendPasswordResetEmail(auth, email);
-      setResetSuccessMessage("Password reset link sent. Please check your institutional email inbox and spam folder.");
+      setResetSuccessMessage("Password reset link sent. Please check your email inbox and spam folder.");
     } catch (error: any) {
       console.warn("Password reset failure details obscured for safety.");
       const errorCode = error?.code || "";
       if (errorCode === "auth/invalid-email") {
-        setResetErrorMessage("Please enter a valid institutional email.");
+        setResetErrorMessage("Please enter a valid email address.");
       } else if (errorCode === "auth/network-request-failed") {
         setResetErrorMessage("Network issue. Please try again.");
       } else if (errorCode === "auth/too-many-requests") {
@@ -1377,13 +1371,13 @@ export default function App() {
             </div>
 
             <p className="text-xs text-slate-400 leading-relaxed font-sans">
-              Enter your registered MVGR institutional email. We'll dispatch a safe, self-signed link via Firebase Auth to reset your secure passcode.
+              Enter your registered email address. We'll dispatch a safe, self-signed link via Firebase Auth to reset your secure passcode.
             </p>
 
             <form onSubmit={handlePasswordReset} className="space-y-4">
               <div>
                 <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest block mb-1.5 font-bold">
-                  Institutional Email Address
+                  Registered Email Address
                 </label>
                 <div className="relative">
                   <span className="absolute left-3.5 top-3.5 text-slate-500 font-mono text-xs font-bold uppercase">
@@ -1392,7 +1386,7 @@ export default function App() {
                   <input
                     type="email"
                     required
-                    placeholder="e.g. student@mvgr.edu"
+                    placeholder="e.g. user@example.com"
                     value={resetEmail}
                     onChange={(e) => setResetEmail(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 text-sm rounded-lg bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:border-theme-teal-action font-mono tracking-wide placeholder-slate-700 block"

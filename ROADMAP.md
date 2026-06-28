@@ -19,6 +19,7 @@
 - ✅ **Phase 13.7**: Firestore Production Security Rules Lock down with zero-trust roles isolation.
 - ✅ **Phase 13.7A**: Firestore Rules Hardening Patch to enforce department-scoped material read isolation, admin-only profile creation, owner-restricted profile updates, and secure context-locked material downloads.
 - ✅ **Phase 13.6D**: Secure Forgot Password / Password Reset self-service flow with generic error handling and strict institutional email restrictions.
+- ✅ **Phase 13.6D-1**: Forgot Password Email Validation Hotfix to support any registered email address (including personal accounts) while maintaining safe generic responses.
 
 ### Firebase Console Deployment Checklists
 To ensure the password reset flow behaves correctly in production:
