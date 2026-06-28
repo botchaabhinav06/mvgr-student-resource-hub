@@ -46,11 +46,6 @@ export const FacultySidebar: React.FC<FacultySidebarProps> = ({
       screen: "FACULTY_REPORTS" as ActiveScreen,
     },
     {
-      label: "AI Tools",
-      icon: Sparkles,
-      screen: "FACULTY_AI_TOOLS" as ActiveScreen,
-    },
-    {
       label: "Profile Settings",
       icon: UserCheck,
       screen: "FACULTY_PROFILE" as ActiveScreen,

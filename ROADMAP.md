@@ -19,6 +19,21 @@
 - ✅ **Phase 13.7**: Firestore Production Security Rules Lock down with zero-trust roles isolation.
 - ✅ **Phase 13.7A**: Firestore Rules Hardening Patch to enforce department-scoped material read isolation, admin-only profile creation, owner-restricted profile updates, and secure context-locked material downloads.
 
+## Active Production AI Scope
+- ✅ **PDF Summary**: Grounded, high-yield structured lecture summarization focusing on key takeaways.
+- ✅ **Important Questions Generator**: Syllabus-grounded practice question worksheets (2M, 5M, 10M).
+- ✅ **Short Notes Generator**: Clear, well-structured, scannable revision study outlines.
+- ✅ **Key Terms & Definitions**: Glossary definitions, abbreviations, and formula extractions.
+- ✅ **AI Output History**: Secure, quota-free viewing vault of previously generated study materials.
+- ✅ **Quota & Cost Control**: Per-user daily role rate-limiting with live quota status tracking.
+- ✅ **Admin AI Diagnostics**: Comprehensive backend telemetry, health smoke tests, and model discovery.
+
+## Removed from Current Production UI / Not in Current Release Scope
+These features have been safely decoupled and hidden from the user-facing interfaces to ensure a clean, focused production scope:
+* **Material Q&A Chatbot** (Temporarily shelved for future closed-circuit multi-turn iterations)
+* **Question Paper Helper** (Shelved for structured blueprint mapping optimization)
+* **Faculty AI Tools Activation** (Staff controls are dormant; AI suite remains dedicated to student study aids)
+
 ## Future Scope (Planned)
 
 ### Short-Term (AI Integration Phases)

@@ -259,8 +259,6 @@ export const AdminAIControlView: React.FC<AdminAIControlViewProps> = ({ material
     { id: "questions", name: "Important Questions Generator", active: true, phase: "Active MVP" },
     { id: "notes", name: "Short Notes Creator", active: true, phase: "Active MVP" },
     { id: "terms", name: "Key Terms Extractor", active: true, phase: "Active MVP" },
-    { id: "chat", name: "Document Context Q&A", active: false, phase: "Phase 14.0" },
-    { id: "mini", name: "Mini Study Assistant", active: false, phase: "Phase 14.1" },
   ];
 
   const limits = [

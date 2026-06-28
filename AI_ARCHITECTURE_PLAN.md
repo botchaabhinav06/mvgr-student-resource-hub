@@ -18,13 +18,21 @@ A general, rate-limited conversational bot helping students clarify fundamental 
 
 ## 2. Role-Wise Feature Matrix
 
-The AI capabilities are segmented based on distinct user roles to prevent abuse and align workflows:
+The AI capabilities are segmented based on distinct user roles to prevent abuse and align workflows. Note that all inactive/placeholder AI features have been decoupled from the current production UI:
 
 | Role | Interface Location | Scope & Feature Set | Cost Control & Access Limits |
 | :--- | :--- | :--- | :--- |
-| **Student** | `AI Assistant` Tab / Page | 1. PDF Summarizer<br>2. Important Questions Generator<br>3. Short Notes Generator<br>4. Key Terms/Definitions Extractor<br>5. Question Paper Helper<br>6. Material Q&A Chatbot | **Max 5 requests/day**<br>No Guest access.<br>Department-locked material processing only. |
-| **Faculty** | `AI Tools` Section on Materials | 1. Generate Material Descriptions<br>2. Generate Topic Tags<br>3. Summary Generation before Publishing<br>4. Important Question Sets from Uploads<br>5. Short Notes Creator for Students<br>6. Upload Announcement Drafts | **Max 10 requests/day**<br>Restricted to department/course upload boundaries. |
-| **Admin** | `AI Control Center` in Admin Dashboard | 1. Global On/Off Feature Toggle switches<br>2. Usage Rate Limit Controls<br>3. Failed AI requests debugger logs<br>4. High-demand material engagement tracker<br>*(No raw chatbot interaction)* | **Max 20 requests/day** (monitoring purposes only). |
+| **Student** | `AI Assistant` Tab / Page | 1. PDF Summarizer<br>2. Important Questions Generator<br>3. Short Notes Generator<br>4. Key Terms/Definitions Extractor | **Max 5 requests/day**<br>No Guest access.<br>Department-locked material processing only. |
+| **Faculty** | *DORMANT* (Dormant Fallback Page) | None (AI suite dedicated to student study aids) | **0 requests/day** (Dormant in current production UI) |
+| **Admin** | `AI Control Center` in Admin Dashboard | 1. Active AI Service Toggles (Summarizer, Questions, Notes, Key Terms)<br>2. Usage Rate Limit Monitoring<br>3. System Diagnostics & Smoke Test | **Max 20 requests/day** (monitoring and smoke testing only). |
+
+---
+
+## 2.1 Removed from Current Production UI / Not in Current Release Scope
+These features have been completely removed or hidden from all visible user-facing screens to ensure a complete, focused, and production-ready product scope:
+* **Material Q&A Chatbot** (Student Interface: Disabled)
+* **Question Paper Helper** (Student Interface: Disabled)
+* **Faculty AI Tools Suite** (Faculty Sidebar: Removed; dormant URL displays an elegant "Not enabled in current production release" fallback card with no live API endpoints)
 
 ---
 

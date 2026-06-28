@@ -459,24 +459,6 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ user, material
       badgeColor: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
       active: true,
     },
-    {
-      id: "chatbot",
-      title: "Material Q&A Chatbot",
-      description: "Engages in dynamic chat closed-circuit grounded exclusively inside this PDF context to clarify concepts.",
-      icon: MessageSquare,
-      badge: "Phase 14.0",
-      badgeColor: "bg-violet-500/10 text-violet-400 border-violet-500/20",
-      active: false,
-    },
-    {
-      id: "paper_helper",
-      title: "Question Paper Helper",
-      description: "Provides structured step-by-step solutions and syllabus blueprints for MVGR academic question papers.",
-      icon: HelpCircle,
-      badge: "Phase 14.0",
-      badgeColor: "bg-violet-500/10 text-violet-400 border-violet-500/20",
-      active: false,
-    },
   ];
 
   return (
